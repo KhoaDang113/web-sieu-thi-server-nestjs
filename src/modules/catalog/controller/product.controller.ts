@@ -8,7 +8,10 @@ import {
   Query,
   Body,
   UseGuards,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ProductService } from '../service/product.service';
 import { Public } from '../../auth/decorators/public.decorator';
 import { GetProductDetailDto } from '../dto/get-product-detail.dto';
@@ -41,14 +44,41 @@ export class ProductController {
 
   @Post()
   @UseGuards(AdminGuard)
-  async createProduct(@Body() dto: CreateProductDto) {
-    return this.productService.create(dto);
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'image_primary', maxCount: 1 },
+      { name: 'images', maxCount: 10 },
+    ]),
+  )
+  async createProduct(
+    @Body() dto: CreateProductDto,
+    @UploadedFiles()
+    files: {
+      image_primary?: Express.Multer.File[];
+      images?: Express.Multer.File[];
+    },
+  ) {
+    return this.productService.create(dto, files);
   }
 
   @Put(':id')
   @UseGuards(AdminGuard)
-  async updateProduct(@Param('id') id: string, @Body() dto: UpdateProductDto) {
-    return this.productService.update(id, dto);
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'image_primary', maxCount: 1 },
+      { name: 'images', maxCount: 10 },
+    ]),
+  )
+  async updateProduct(
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+    @UploadedFiles()
+    files?: {
+      image_primary?: Express.Multer.File[];
+      images?: Express.Multer.File[];
+    },
+  ) {
+    return this.productService.update(id, dto, files);
   }
 
   @Delete(':id')

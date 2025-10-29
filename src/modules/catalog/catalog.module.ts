@@ -19,6 +19,7 @@ import { BannerService } from './service/banner.service';
 import { Address, AddressSchema } from './schema/address.schema';
 import { AddressService } from './service/address.service';
 import { AddressController } from './controller/address.controller';
+import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AddressController } from './controller/address.controller';
   providers: [
     ProductService,
     CategoryService,
+    CloudinaryService,
     CartService,
     BannerService,
     AddressService,

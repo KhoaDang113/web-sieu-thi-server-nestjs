@@ -9,6 +9,7 @@ import {
 import { Category, CategoryDocument } from '../schema/category.schema';
 import { CreateBannerDto } from '../dto/create-banner.dto';
 import { UpdateBannerDto } from '../dto/update-banner.dto';
+import { CloudinaryService } from 'src/shared/cloudinary/cloudinary.service';
 
 @Injectable()
 export class BannerService {
@@ -17,6 +18,7 @@ export class BannerService {
     private bannerModel: Model<BannerDocument>,
     @InjectModel(Category.name)
     private categoryModel: Model<CategoryDocument>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async getBannersByCategorySlugOrAll(
@@ -45,7 +47,10 @@ export class BannerService {
       .lean();
   }
 
-  async create(dto: CreateBannerDto): Promise<Banner> {
+  async create(
+    dto: CreateBannerDto,
+    file: Express.Multer.File,
+  ): Promise<Banner> {
     if (dto.category_id && !Types.ObjectId.isValid(dto.category_id)) {
       throw new BadRequestException('Invalid category ID');
     }
@@ -60,12 +65,21 @@ export class BannerService {
       }
     }
 
+    let imageUrl = dto.image;
+    if (file) {
+      imageUrl = await this.cloudinaryService.uploadImage(
+        file,
+        'WebSieuThi/banners',
+      );
+    }
+
     const banner = new this.bannerModel({
       ...dto,
       category_id: dto.category_id
         ? new Types.ObjectId(dto.category_id)
         : undefined,
       is_active: dto.is_active !== undefined ? dto.is_active : true,
+      image: imageUrl,
     });
 
     const savedBanner = await banner.save();
@@ -78,7 +92,11 @@ export class BannerService {
     } as Banner;
   }
 
-  async update(id: string, dto: UpdateBannerDto): Promise<Banner> {
+  async update(
+    id: string,
+    dto: UpdateBannerDto,
+    file: Express.Multer.File,
+  ): Promise<Banner> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid banner ID');
     }
@@ -96,13 +114,25 @@ export class BannerService {
       }
     }
 
-    const updateData: Record<string, any> = { ...dto };
+    let imageUrl = dto.image;
+    if (file) {
+      imageUrl = await this.cloudinaryService.uploadImage(
+        file,
+        'WebSieuThi/banners',
+      );
+    }
+
+    const updateData: Record<string, any> = { ...dto, image: imageUrl };
     if (dto.category_id) {
       updateData.category_id = new Types.ObjectId(dto.category_id);
     }
 
     const updated = await this.bannerModel
-      .findByIdAndUpdate(id, { $set: updateData }, { new: true })
+      .findOneAndUpdate(
+        { _id: id, is_deleted: false },
+        { $set: updateData },
+        { new: true },
+      )
       .select('image link category_id')
       .lean();
 

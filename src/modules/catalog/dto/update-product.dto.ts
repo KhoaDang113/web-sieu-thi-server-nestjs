@@ -8,6 +8,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateProductDto {
   @IsOptional()
@@ -31,17 +32,20 @@ export class UpdateProductDto {
   unit?: string;
 
   @IsOptional()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   @IsNumber()
   @Min(0)
   unit_price?: number;
 
   @IsOptional()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   @IsNumber()
   @Min(0)
   @Max(100)
   discount_percent?: number;
 
   @IsOptional()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   @IsNumber()
   @Min(0)
   final_price?: number;

@@ -10,10 +10,13 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { CreateBannerDto } from '../dto/create-banner.dto';
 import { UpdateBannerDto } from '../dto/update-banner.dto';
 import { AdminGuard } from 'src/common/guards/admin.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('banners')
 export class BannerController {
@@ -27,17 +30,23 @@ export class BannerController {
 
   @Post()
   @UseGuards(AdminGuard)
-  async create(@Body() createBannerDto: CreateBannerDto) {
-    return this.bannerService.create(createBannerDto);
+  @UseInterceptors(FileInterceptor('image'))
+  async create(
+    @Body() createBannerDto: CreateBannerDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.bannerService.create(createBannerDto, file);
   }
 
   @Put(':id')
   @UseGuards(AdminGuard)
+  @UseInterceptors(FileInterceptor('image'))
   async update(
     @Param('id') id: string,
     @Body() updateBannerDto: UpdateBannerDto,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.bannerService.update(id, updateBannerDto);
+    return this.bannerService.update(id, updateBannerDto, file);
   }
 
   @Delete(':id')

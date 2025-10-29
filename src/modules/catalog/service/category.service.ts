@@ -8,12 +8,14 @@ import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from '../schema/category.schema';
 import { CreateCategoryDto } from '../dto/create-category.dto';
 import { UpdateCategoryDto } from '../dto/update-category.dto';
+import { CloudinaryService } from 'src/shared/cloudinary/cloudinary.service';
 
 @Injectable()
 export class CategoryService {
   constructor(
     @InjectModel(Category.name)
     private categoryModel: Model<CategoryDocument>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async findAll(): Promise<Category[]> {
@@ -93,7 +95,10 @@ export class CategoryService {
       .exec();
   }
 
-  async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
+  async create(
+    createCategoryDto: CreateCategoryDto,
+    file: Express.Multer.File,
+  ): Promise<Category> {
     if (createCategoryDto.parent_id) {
       if (!Types.ObjectId.isValid(createCategoryDto.parent_id)) {
         throw new BadRequestException('Invalid parent category ID');
@@ -107,6 +112,14 @@ export class CategoryService {
       }
     }
 
+    let imageUrl = createCategoryDto.image;
+    if (file) {
+      imageUrl = await this.cloudinaryService.uploadImage(
+        file,
+        'WebSieuThi/categories',
+      );
+    }
+
     const category = new this.categoryModel({
       ...createCategoryDto,
       parent_id: createCategoryDto.parent_id
@@ -116,6 +129,7 @@ export class CategoryService {
         createCategoryDto.is_active !== undefined
           ? createCategoryDto.is_active
           : true,
+      image: imageUrl,
     });
 
     try {
@@ -138,6 +152,7 @@ export class CategoryService {
   async update(
     id: string,
     updateCategoryDto: UpdateCategoryDto,
+    file: Express.Multer.File,
   ): Promise<Category> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid category ID');
@@ -160,7 +175,18 @@ export class CategoryService {
       }
     }
 
-    const updateData: Record<string, any> = { ...updateCategoryDto };
+    let imageUrl = updateCategoryDto.image;
+    if (file) {
+      imageUrl = await this.cloudinaryService.uploadImage(
+        file,
+        'WebSieuThi/categories',
+      );
+    }
+
+    const updateData: Record<string, any> = {
+      ...updateCategoryDto,
+      image: imageUrl,
+    };
     if (updateCategoryDto.parent_id) {
       updateData.parent_id = new Types.ObjectId(updateCategoryDto.parent_id);
     }

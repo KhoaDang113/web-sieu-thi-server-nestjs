@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { CloudinaryModule } from './shared/cloudinary/cloudinary.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -28,6 +29,7 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     AuthModule,
     CatalogModule,
+    CloudinaryModule,
   ],
   providers: [
     {

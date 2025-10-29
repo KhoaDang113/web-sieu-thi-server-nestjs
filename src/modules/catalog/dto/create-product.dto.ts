@@ -8,6 +8,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateProductDto {
   @IsNotEmpty()
@@ -31,24 +32,27 @@ export class CreateProductDto {
   unit?: string;
 
   @IsNotEmpty()
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @Min(0)
   unit_price: number;
 
   @IsOptional()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   @IsNumber()
   @Min(0)
   @Max(100)
   discount_percent?: number;
 
   @IsOptional()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   @IsNumber()
   @Min(0)
   final_price?: number;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  image_primary: string;
+  image_primary?: string;
 
   @IsOptional()
   @IsArray()
