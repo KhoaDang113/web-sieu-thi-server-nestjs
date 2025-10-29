@@ -59,6 +59,20 @@ export class AuthService {
     });
   }
 
+  private async sendResetPasswordEmail(email: string, code: string) {
+    const html = `
+      <div>
+        <h2>Mã xác thực</h2>
+        <p>Mã OTP: <b>${code}</b></p>
+        <p>Hiệu lực ${OTP_TTL_MIN} phút.</p>
+      </div>`;
+    await this.mailer.sendEmail({
+      to: email,
+      subject: 'Xác thực đặt lại mật khẩu',
+      html,
+    });
+  }
+
   async registerEmail(
     email: string,
     password: string,
@@ -100,9 +114,9 @@ export class AuthService {
     return { user: newUser, accessToken, refreshToken };
   }
 
-  async createEmailVerification(email: string) {
+  async createEmailVerification(email: string, type: string = 'email_otp') {
     const latest = await this.verificationModel
-      .findOne({ target: email, type: 'email_otp' })
+      .findOne({ target: email, type })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -118,12 +132,16 @@ export class AuthService {
 
     const otp = await this.verificationService.generateOtp(
       email,
-      'email_otp',
+      type,
       OTP_LEN,
       OTP_SALT_ROUNDS,
     );
 
-    await this.sendEmailOtp(email, otp);
+    if (type === 'email_otp') {
+      await this.sendEmailOtp(email, otp);
+    } else if (type === 'reset_password') {
+      await this.sendResetPasswordEmail(email, otp);
+    }
     return { success: true };
   }
 
@@ -440,5 +458,80 @@ export class AuthService {
 
     await newUser.save();
     return newUser;
+  }
+
+  async sendResetPasswordOTP(email: string) {
+    if (!email) {
+      throw new HttpException('Email not found', HttpStatus.NOT_FOUND);
+    }
+
+    await this.createEmailVerification(email, 'reset_password');
+
+    return { success: true, message: 'Reset password OTP sent successfully' };
+  }
+
+  async verifyResetPasswordOTP(
+    email: string,
+    code: string,
+  ): Promise<{ success: boolean; message: string; resetToken: string }> {
+    await this.verificationService.validateOtp(email, code, 'reset_password');
+
+    const user = await this.userModel.findOne({ email });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    const resetToken = this.jwtService.signAccessToken(
+      user._id.toString(),
+      'reset_password',
+    );
+    const resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpires;
+    await user.save();
+
+    await this.verificationModel.deleteMany({
+      target: email,
+      type: 'reset_password',
+    });
+
+    return {
+      success: true,
+      message: 'Reset password OTP verified successfully',
+      resetToken: resetToken,
+    };
+  }
+
+  async resetPassword(
+    email: string,
+    resetToken: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.userModel.findOne({ email }).select('+password');
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (!user.resetPasswordToken || user.resetPasswordToken !== resetToken) {
+      throw new HttpException('Invalid reset token', HttpStatus.UNAUTHORIZED);
+    }
+
+    if (
+      !user.resetPasswordExpires ||
+      user.resetPasswordExpires.getTime() < Date.now()
+    ) {
+      throw new HttpException('Reset token expired', HttpStatus.UNAUTHORIZED);
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined as unknown as string;
+    user.resetPasswordExpires = undefined as unknown as Date;
+    await user.save();
+
+    return {
+      success: true,
+      message: 'Password reset successfully',
+    };
   }
 }
