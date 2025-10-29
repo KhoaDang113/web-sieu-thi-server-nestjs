@@ -1,8 +1,9 @@
 import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateBannerDto {
+  @IsOptional()
   @IsString()
-  image: string;
+  image?: string;
 
   @IsString()
   link: string;

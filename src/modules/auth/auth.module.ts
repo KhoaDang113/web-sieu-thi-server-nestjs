@@ -7,10 +7,10 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { EmailVerifiedGuard } from './guards/email-verified.guard';
 import { UserInfoGuard } from './guards/user-info.guard';
 import { GoogleStrategy } from './utils/google.strategy';
-import { MailerModule } from '../mailer/mailer.module';
+import { MailerModule } from '../../shared/mailer/mailer.module';
 import { RefreshTokenModule } from '../refresh-tokens/refresh-token.module';
 import { VerificationModule } from '../verification/verification.module';
-import { SmsModule } from '../sms/sms.module';
+import { SmsModule } from '../../shared/sms/sms.module';
 
 @Module({
   imports: [

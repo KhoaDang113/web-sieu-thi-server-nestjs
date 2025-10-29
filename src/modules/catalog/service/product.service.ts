@@ -9,6 +9,7 @@ import { Product, ProductDocument } from '../schema/product.schema';
 import { Category, CategoryDocument } from '../schema/category.schema';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
+import { CloudinaryService } from '../../../shared/cloudinary/cloudinary.service';
 
 @Injectable()
 export class ProductService {
@@ -17,6 +18,7 @@ export class ProductService {
     private productModel: Model<ProductDocument>,
     @InjectModel(Category.name)
     private categoryModel: Model<CategoryDocument>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async getProductsByCategorySlugOrAll(
@@ -101,7 +103,13 @@ export class ProductService {
     return productsPromotion;
   }
 
-  async create(dto: CreateProductDto): Promise<Product> {
+  async create(
+    dto: CreateProductDto,
+    files?: {
+      image_primary?: Express.Multer.File[];
+      images?: Express.Multer.File[];
+    },
+  ): Promise<Product> {
     if (!Types.ObjectId.isValid(dto.category_id)) {
       throw new BadRequestException('Invalid category ID');
     }
@@ -119,6 +127,22 @@ export class ProductService {
         ? dto.unit_price * (1 - dto.discount_percent / 100)
         : dto.unit_price;
 
+    let imagePrimaryUrl = dto.image_primary;
+    if (files?.image_primary && files.image_primary[0]) {
+      imagePrimaryUrl = await this.cloudinaryService.uploadImage(
+        files.image_primary[0],
+        'WebSieuThi/products',
+      );
+    }
+
+    let imagesUrls = dto.images;
+    if (files?.images && files.images.length > 0) {
+      imagesUrls = await this.cloudinaryService.uploadMultipleImages(
+        files.images,
+        'WebSieuThi/products',
+      );
+    }
+
     const product = new this.productModel({
       ...dto,
       category_id: new Types.ObjectId(dto.category_id),
@@ -127,6 +151,8 @@ export class ProductService {
       discount_percent: dto.discount_percent || 0,
       stock_status: dto.stock_status || 'in_stock',
       is_active: dto.is_active !== undefined ? dto.is_active : true,
+      image_primary: imagePrimaryUrl,
+      images: imagesUrls,
     });
 
     try {
@@ -160,7 +186,14 @@ export class ProductService {
     }
   }
 
-  async update(id: string, dto: UpdateProductDto): Promise<Product> {
+  async update(
+    id: string,
+    dto: UpdateProductDto,
+    files?: {
+      image_primary?: Express.Multer.File[];
+      images?: Express.Multer.File[];
+    },
+  ): Promise<Product> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid product ID');
     }
@@ -179,9 +212,28 @@ export class ProductService {
       throw new BadRequestException('Invalid brand ID');
     }
 
-    const currentProduct = await this.productModel.findById(id);
+    const currentProduct = await this.productModel.findOne({
+      _id: id,
+      is_deleted: false,
+    });
     if (!currentProduct) {
       throw new NotFoundException('Product not found');
+    }
+
+    let imagePrimaryUrl = dto.image_primary ?? currentProduct.image_primary;
+    if (files?.image_primary && files.image_primary[0]) {
+      imagePrimaryUrl = await this.cloudinaryService.uploadImage(
+        files.image_primary[0],
+        'WebSieuThi/products',
+      );
+    }
+
+    let imagesUrls = dto.images ?? currentProduct.images;
+    if (files?.images && files.images.length > 0) {
+      imagesUrls = await this.cloudinaryService.uploadMultipleImages(
+        files.images,
+        'WebSieuThi/products',
+      );
     }
 
     const unitPrice = dto.unit_price ?? currentProduct.unit_price;
@@ -190,7 +242,12 @@ export class ProductService {
     const finalPrice =
       discountPercent > 0 ? unitPrice * (1 - discountPercent / 100) : unitPrice;
 
-    const updateData: Record<string, any> = { ...dto, final_price: finalPrice };
+    const updateData: Record<string, any> = {
+      ...dto,
+      final_price: finalPrice,
+      image_primary: imagePrimaryUrl,
+      images: imagesUrls,
+    };
 
     if (dto.category_id) {
       updateData.category_id = new Types.ObjectId(dto.category_id);

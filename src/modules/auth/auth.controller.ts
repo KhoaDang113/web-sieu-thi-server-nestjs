@@ -12,7 +12,6 @@ import {
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { EmailVerifiedGuard } from './guards/email-verified.guard';
-// import { UserInfoGuard } from './guards/user-info.guard';
 import { EmailVerified } from './decorators/email-verified.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import { RegisterPhoneDto, VerifyCodeDto, LoginEmailDto } from './dto/auth.dto';

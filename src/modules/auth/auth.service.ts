@@ -14,7 +14,7 @@ import {
 } from '../refresh-tokens/schemas/refresh-token.schema';
 import { CustomJwtService } from './customJwt.service';
 import { RefreshTokenService } from '../refresh-tokens/refresh-token.service';
-import { SmsService } from '../sms/sms.service';
+import { SmsService } from '../../shared/sms/sms.service';
 import { JwtPayload } from 'jsonwebtoken';
 import { RegisterEmailResponseDto } from './dto/register-email-response.dto';
 import { VerificationService } from '../verification/verification.service';
@@ -22,7 +22,7 @@ import {
   Verification,
   VerificationDocument,
 } from '../verification/schema/verification.schema';
-import { MailerService } from '../mailer/mailer.service';
+import { MailerService } from '../../shared/mailer/mailer.service';
 import { ValidateGoogleUserDto } from './dto/validate-google-user.dto';
 
 const OTP_TTL_MIN = 5;
@@ -429,14 +429,13 @@ export class AuthService {
       return user;
     }
 
-    // Tạo user mới
     const newUser = new this.userModel({
       name: googleUser.name,
       email: googleUser.email,
       avatar: googleUser.avatar,
       authProvider: 'google',
       providerId: googleUser.providerId,
-      emailVerifiedAt: new Date(), // Google OAuth đã xác thực email
+      emailVerifiedAt: new Date(),
     });
 
     await newUser.save();
