@@ -534,4 +534,33 @@ export class AuthService {
       message: 'Password reset successfully',
     };
   }
+
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.userModel.findById(userId).select('+password');
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    const isMatch = await this.comparePassword(
+      oldPassword,
+      user.password as string,
+    );
+
+    if (!isMatch) {
+      throw new HttpException(
+        'Old password is incorrect',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    user.password = newPassword;
+    await user.save();
+    return {
+      success: true,
+      message: 'Password changed successfully',
+    };
+  }
 }

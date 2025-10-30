@@ -8,6 +8,7 @@ import {
   HttpStatus,
   HttpException,
   UseGuards,
+  Put,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -22,6 +23,7 @@ import { LoginPhoneDto } from './dto/login-phone.dto';
 import { VerifyLoginSmsDto } from './dto/verify-login-sms.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordWithTokenDto } from './dto/reset-password-with-token.dto';
+import { ChangePasswordDto } from './dto/change-Password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -408,6 +410,18 @@ export class AuthController {
       console.log('error', error);
       throw new HttpException('Server error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  @Put('change-password')
+  async changePassword(@Body() dto: ChangePasswordDto, @Req() req: Request) {
+    const userId = req.user?.id as string;
+    if (!userId)
+      throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
+    return this.authService.changePassword(
+      userId,
+      dto.oldPassword,
+      dto.newPassword,
+    );
   }
 
   private setTokenCookies(
