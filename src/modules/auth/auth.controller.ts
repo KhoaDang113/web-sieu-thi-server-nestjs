@@ -8,6 +8,7 @@ import {
   HttpStatus,
   HttpException,
   UseGuards,
+  Put,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -20,6 +21,9 @@ import { Public } from './decorators/public.decorator';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { LoginPhoneDto } from './dto/login-phone.dto';
 import { VerifyLoginSmsDto } from './dto/verify-login-sms.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordWithTokenDto } from './dto/reset-password-with-token.dto';
+import { ChangePasswordDto } from './dto/change-Password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -344,6 +348,53 @@ export class AuthController {
     }
   }
 
+  @Public()
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.sendResetPasswordOTP(dto.email);
+  }
+
+  @Public()
+  @Post('verify-reset-password')
+  async verifyResetPassword(@Body() dto: VerifyEmailDto, @Res() res: Response) {
+    const result = await this.authService.verifyResetPasswordOTP(
+      dto.email,
+      dto.code,
+    );
+
+    res.cookie('resetToken', result.resetToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return res.json({
+      success: result.success,
+      message: result.message,
+    });
+  }
+
+  @Public()
+  @Post('reset-password')
+  async resetPassword(
+    @Body() dto: ResetPasswordWithTokenDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const resetToken = (req.cookies?.resetToken as string) || dto.resetToken;
+
+    const result = await this.authService.resetPassword(
+      dto.email,
+      resetToken,
+      dto.newPassword,
+    );
+
+    res.clearCookie('resetToken');
+
+    return res.json(result);
+  }
+
   @Get('me')
   @UseGuards(EmailVerifiedGuard)
   @EmailVerified()
@@ -359,6 +410,18 @@ export class AuthController {
       console.log('error', error);
       throw new HttpException('Server error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  @Put('change-password')
+  async changePassword(@Body() dto: ChangePasswordDto, @Req() req: Request) {
+    const userId = req.user?.id as string;
+    if (!userId)
+      throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
+    return this.authService.changePassword(
+      userId,
+      dto.oldPassword,
+      dto.newPassword,
+    );
   }
 
   private setTokenCookies(
