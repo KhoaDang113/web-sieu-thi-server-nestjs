@@ -1,14 +1,10 @@
 import { IsOptional, IsMongoId, IsNumber, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export class GetCommentsDto {
+export class GetRatingsDto {
   @IsMongoId()
   @IsOptional()
   product_id?: string;
-
-  @IsMongoId()
-  @IsOptional()
-  parent_id?: string;
 
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
@@ -22,3 +18,4 @@ export class GetCommentsDto {
   @IsOptional()
   limit?: number = 10;
 }
+

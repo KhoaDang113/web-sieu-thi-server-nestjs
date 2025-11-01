@@ -9,12 +9,9 @@ import {
   Body,
   UseGuards,
   Req,
-  UseInterceptors,
-  UploadedFiles,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { FilesInterceptor } from '@nestjs/platform-express';
 import { CommentService } from '../service/comment.service';
 import { CreateCommentDto } from '../dto/create-comment.dto';
 import { UpdateCommentDto } from '../dto/update-comment.dto';
@@ -51,33 +48,36 @@ export class CommentController {
     return this.commentService.getCommentById(id);
   }
 
-  @Post()
-  @UseInterceptors(FilesInterceptor('images', 5))
-  async createComment(
-    @Req() req: Request,
-    @Body() dto: CreateCommentDto,
-    @UploadedFiles() files: Express.Multer.File[],
+  @Public()
+  @Get(':id/replies')
+  async getReplies(
+    @Param('id') id: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
   ) {
+    return this.commentService.getReplies(id, page, limit);
+  }
+
+  @Post()
+  async createComment(@Req() req: Request, @Body() dto: CreateCommentDto) {
     const userId = req.user?.id as string;
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    return this.commentService.createComment(userId, dto, files);
+    return this.commentService.createComment(userId, dto);
   }
 
   @Put(':id')
-  @UseInterceptors(FilesInterceptor('images', 5))
   async updateComment(
     @Param('id') id: string,
     @Req() req: Request,
     @Body() dto: UpdateCommentDto,
-    @UploadedFiles() files: Express.Multer.File[],
   ) {
     const userId = req.user?.id as string;
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    return this.commentService.updateComment(id, userId, dto, files);
+    return this.commentService.updateComment(id, userId, dto);
   }
 
   @Delete(':id')

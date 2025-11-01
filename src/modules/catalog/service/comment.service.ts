@@ -10,28 +10,15 @@ import { Comment, CommentDocument } from '../schema/comment.schema';
 import { CreateCommentDto } from '../dto/create-comment.dto';
 import { UpdateCommentDto } from '../dto/update-comment.dto';
 import { GetCommentsDto } from '../dto/get-comments.dto';
-import { CloudinaryService } from '../../../shared/cloudinary/cloudinary.service';
-
-interface RatingStats {
-  _id: null;
-  avgRating: number;
-  totalRatings: number;
-  rating5: number;
-  rating4: number;
-  rating3: number;
-  rating2: number;
-  rating1: number;
-}
 
 @Injectable()
 export class CommentService {
   constructor(
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
-    private cloudinaryService: CloudinaryService,
   ) {}
 
   async getCommentsByProduct(dto: GetCommentsDto) {
-    const { product_id, page = 1, limit = 10 } = dto;
+    const { product_id, parent_id, page = 1, limit = 10 } = dto;
 
     if (!product_id) {
       throw new BadRequestException('product_id is required');
@@ -43,65 +30,33 @@ export class CommentService {
 
     const skip = (page - 1) * limit;
 
+    const query: Record<string, any> = {
+      product_id: new Types.ObjectId(product_id),
+      is_deleted: false,
+    };
+
+    if (!parent_id) {
+      query.parent_id = null;
+    } else {
+      if (!Types.ObjectId.isValid(parent_id)) {
+        throw new BadRequestException('parent_id is invalid');
+      }
+      query.parent_id = new Types.ObjectId(parent_id);
+    }
+
     const [comments, total] = await Promise.all([
       this.commentModel
-        .find({
-          product_id: new Types.ObjectId(product_id),
-          is_deleted: false,
-        })
-        .populate('user_id', 'name avatar email')
+        .find(query)
+        .populate('user_id', 'name avatar email role')
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
-        .select('_id product_id user_id content rating images created_at')
+        .select(
+          '_id product_id user_id content parent_id reply_count created_at updated_at',
+        )
         .lean(),
-      this.commentModel.countDocuments({
-        product_id: new Types.ObjectId(product_id),
-        is_deleted: false,
-      }),
+      this.commentModel.countDocuments(query),
     ]);
-
-    const ratingStats = await this.commentModel.aggregate<RatingStats>([
-      {
-        $match: {
-          product_id: new Types.ObjectId(product_id),
-          is_deleted: false,
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          avgRating: { $avg: '$rating' },
-          totalRatings: { $sum: 1 },
-          rating5: {
-            $sum: { $cond: [{ $eq: ['$rating', 5] }, 1, 0] },
-          },
-          rating4: {
-            $sum: { $cond: [{ $eq: ['$rating', 4] }, 1, 0] },
-          },
-          rating3: {
-            $sum: { $cond: [{ $eq: ['$rating', 3] }, 1, 0] },
-          },
-          rating2: {
-            $sum: { $cond: [{ $eq: ['$rating', 2] }, 1, 0] },
-          },
-          rating1: {
-            $sum: { $cond: [{ $eq: ['$rating', 1] }, 1, 0] },
-          },
-        },
-      },
-    ]);
-
-    const stats: RatingStats = ratingStats[0] || {
-      _id: null,
-      avgRating: 0,
-      totalRatings: 0,
-      rating5: 0,
-      rating4: 0,
-      rating3: 0,
-      rating2: 0,
-      rating1: 0,
-    };
 
     return {
       comments,
@@ -110,17 +65,6 @@ export class CommentService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-      },
-      stats: {
-        avgRating: Math.round(stats.avgRating * 10) / 10,
-        totalRatings: stats.totalRatings,
-        distribution: {
-          5: stats.rating5,
-          4: stats.rating4,
-          3: stats.rating3,
-          2: stats.rating2,
-          1: stats.rating1,
-        },
       },
     };
   }
@@ -139,10 +83,20 @@ export class CommentService {
           is_deleted: false,
         })
         .populate('product_id', 'name slug image_primary')
+        .populate({
+          path: 'parent_id',
+          select: 'content user_id',
+          populate: {
+            path: 'user_id',
+            select: 'name avatar',
+          },
+        })
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
-        .select('_id product_id user_id content rating images created_at')
+        .select(
+          '_id product_id user_id content parent_id reply_count created_at',
+        )
         .lean(),
       this.commentModel.countDocuments({
         user_id: new Types.ObjectId(userId),
@@ -161,24 +115,28 @@ export class CommentService {
     };
   }
 
-  async createComment(
-    userId: string,
-    dto: CreateCommentDto,
-    files?: Express.Multer.File[],
-  ) {
+  async createComment(userId: string, dto: CreateCommentDto) {
     if (!Types.ObjectId.isValid(dto.product_id)) {
       throw new BadRequestException('product_id is invalid');
     }
 
-    let imageUrls: string[] = [];
-    if (files && files.length > 0) {
-      try {
-        imageUrls = await this.cloudinaryService.uploadMultipleImages(
-          files,
-          'WebSieuThi/comments',
+    if (dto.parent_id) {
+      if (!Types.ObjectId.isValid(dto.parent_id)) {
+        throw new BadRequestException('parent_id is invalid');
+      }
+
+      const parentComment = await this.commentModel.findOne({
+        _id: new Types.ObjectId(dto.parent_id),
+        is_deleted: false,
+      });
+
+      if (!parentComment) {
+        throw new NotFoundException('Parent comment not found');
+      }
+      if (parentComment.parent_id) {
+        throw new BadRequestException(
+          'Cannot reply to a reply. Maximum 2 levels allowed',
         );
-      } catch {
-        throw new BadRequestException('Error uploading images');
       }
     }
 
@@ -186,16 +144,24 @@ export class CommentService {
       product_id: new Types.ObjectId(dto.product_id),
       user_id: new Types.ObjectId(userId),
       content: dto.content,
-      rating: dto.rating,
-      images: imageUrls,
+      parent_id: dto.parent_id ? new Types.ObjectId(dto.parent_id) : null,
     });
 
     await comment.save();
 
+    if (dto.parent_id) {
+      await this.commentModel.findByIdAndUpdate(dto.parent_id, {
+        $push: { replies: comment._id },
+        $inc: { reply_count: 1 },
+      });
+    }
+
     return await this.commentModel
       .findById(comment._id)
-      .populate('user_id', 'name avatar email')
-      .select('_id product_id user_id content rating images created_at')
+      .populate('user_id', 'name avatar email role')
+      .select(
+        '_id product_id user_id content parent_id reply_count created_at updated_at',
+      )
       .lean();
   }
 
@@ -203,7 +169,6 @@ export class CommentService {
     commentId: string,
     userId: string,
     dto: UpdateCommentDto,
-    files?: Express.Multer.File[],
   ) {
     if (!Types.ObjectId.isValid(commentId)) {
       throw new BadRequestException('commentId is invalid');
@@ -220,31 +185,22 @@ export class CommentService {
 
     if (comment.user_id.toString() !== userId) {
       throw new ForbiddenException(
-        'You do not have permission to edit this comment',
+        'You are not allowed to update this comment',
       );
     }
-    if (files && files.length > 0) {
-      try {
-        dto.images = await this.cloudinaryService.uploadMultipleImages(
-          files,
-          'WebSieuThi/comments',
-        );
-      } catch {
-        throw new BadRequestException('Error uploading images');
-      }
+
+    if (dto.content) {
+      comment.content = dto.content;
     }
 
-    const { images, ...rest } = dto;
-    Object.assign(comment, rest);
-    if (Array.isArray(images) && images.length > 0) {
-      comment.images = images;
-    }
     await comment.save();
 
     return await this.commentModel
       .findById(comment._id)
-      .populate('user_id', 'name avatar email')
-      .select('_id product_id user_id content rating images created_at')
+      .populate('user_id', 'name avatar email role')
+      .select(
+        '_id product_id user_id content parent_id reply_count created_at updated_at',
+      )
       .lean();
   }
 
@@ -264,12 +220,23 @@ export class CommentService {
 
     if (!isAdmin && comment.user_id.toString() !== userId) {
       throw new ForbiddenException(
-        'You do not have permission to delete this comment',
+        'You are not allowed to delete this comment',
       );
     }
 
     comment.is_deleted = true;
     await comment.save();
+
+    if (comment.parent_id) {
+      const parentComment = await this.commentModel.findById(comment.parent_id);
+      if (parentComment) {
+        parentComment.replies = parentComment.replies.filter(
+          (id) => id.toString() !== commentId,
+        );
+        parentComment.reply_count = parentComment.replies.length;
+        await parentComment.save();
+      }
+    }
 
     return {
       message: 'Comment deleted successfully',
@@ -286,9 +253,19 @@ export class CommentService {
         _id: new Types.ObjectId(commentId),
         is_deleted: false,
       })
-      .populate('user_id', 'name avatar email')
+      .populate('user_id', 'name avatar email role')
       .populate('product_id', 'name slug image_primary')
-      .select('_id product_id user_id content rating images created_at')
+      .populate({
+        path: 'parent_id',
+        select: 'content user_id',
+        populate: {
+          path: 'user_id',
+          select: 'name avatar',
+        },
+      })
+      .select(
+        '_id product_id user_id content parent_id reply_count created_at updated_at',
+      )
       .lean();
 
     if (!comment) {
@@ -296,5 +273,43 @@ export class CommentService {
     }
 
     return comment;
+  }
+
+  async getReplies(commentId: string, page = 1, limit = 10) {
+    if (!Types.ObjectId.isValid(commentId)) {
+      throw new BadRequestException('commentId is invalid');
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [replies, total] = await Promise.all([
+      this.commentModel
+        .find({
+          parent_id: new Types.ObjectId(commentId),
+          is_deleted: false,
+        })
+        .populate('user_id', 'name avatar email role')
+        .sort({ created_at: 1 })
+        .skip(skip)
+        .limit(limit)
+        .select(
+          '_id product_id user_id content parent_id reply_count created_at updated_at',
+        )
+        .lean(),
+      this.commentModel.countDocuments({
+        parent_id: new Types.ObjectId(commentId),
+        is_deleted: false,
+      }),
+    ]);
+
+    return {
+      replies,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

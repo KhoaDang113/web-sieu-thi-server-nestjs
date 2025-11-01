@@ -1,14 +1,4 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsNumber,
-  Min,
-  Max,
-  IsArray,
-  IsOptional,
-  IsMongoId,
-} from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsString, IsNotEmpty, IsMongoId, IsOptional } from 'class-validator';
 
 export class CreateCommentDto {
   @IsMongoId()
@@ -19,14 +9,7 @@ export class CreateCommentDto {
   @IsNotEmpty()
   content: string;
 
-  @Transform(({ value }) => Number(value))
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  @IsNotEmpty()
-  rating: number;
-
-  @IsArray()
+  @IsMongoId()
   @IsOptional()
-  images?: string[];
+  parent_id?: string;
 }

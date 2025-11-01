@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type CommentDocument = Comment & Document;
+export type RatingDocument = Rating & Document;
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
-export class Comment {
+export class Rating {
   _id?: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Product', required: true })
@@ -16,14 +16,11 @@ export class Comment {
   @Prop({ required: true, trim: true })
   content: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Comment', default: null })
-  parent_id?: Types.ObjectId;
+  @Prop({ type: Number, min: 1, max: 5, required: true })
+  rating: number;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Comment' }], default: [] })
-  replies: Types.ObjectId[];
-
-  @Prop({ type: Number, default: 0 })
-  reply_count: number;
+  @Prop({ type: [String], default: [] })
+  images: string[];
 
   @Prop({ type: Boolean, default: false })
   is_deleted: boolean;
@@ -32,8 +29,7 @@ export class Comment {
   updated_at?: Date;
 }
 
-export const CommentSchema = SchemaFactory.createForClass(Comment);
+export const RatingSchema = SchemaFactory.createForClass(Rating);
 
-CommentSchema.index({ product_id: 1, created_at: -1 });
-CommentSchema.index({ user_id: 1, created_at: -1 });
-CommentSchema.index({ parent_id: 1, created_at: -1 });
+RatingSchema.index({ product_id: 1, created_at: -1 });
+RatingSchema.index({ user_id: 1, created_at: -1 });

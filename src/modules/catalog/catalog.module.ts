@@ -21,6 +21,9 @@ import { AddressService } from './service/address.service';
 import { AddressController } from './controller/address.controller';
 import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
 import { Brand, BrandSchema } from './schema/brand.schema';
+import { Rating, RatingSchema } from './schema/rating.schema';
+import { RatingService } from './service/rating.service';
+import { RatingController } from './controller/rating.controller';
 import { Comment, CommentSchema } from './schema/comment.schema';
 import { CommentService } from './service/comment.service';
 import { CommentController } from './controller/comment.controller';
@@ -35,6 +38,7 @@ import { CommentController } from './controller/comment.controller';
       { name: Banner.name, schema: BannerSchema },
       { name: Address.name, schema: AddressSchema },
       { name: Brand.name, schema: BrandSchema },
+      { name: Rating.name, schema: RatingSchema },
       { name: Comment.name, schema: CommentSchema },
     ]),
   ],
@@ -44,6 +48,7 @@ import { CommentController } from './controller/comment.controller';
     CartController,
     BannerController,
     AddressController,
+    RatingController,
     CommentController,
   ],
   providers: [
@@ -53,6 +58,7 @@ import { CommentController } from './controller/comment.controller';
     CartService,
     BannerService,
     AddressService,
+    RatingService,
     CommentService,
   ],
   exports: [
@@ -61,6 +67,7 @@ import { CommentController } from './controller/comment.controller';
     CartService,
     BannerService,
     AddressService,
+    RatingService,
     CommentService,
   ],
 })
