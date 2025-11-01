@@ -67,10 +67,14 @@ export class BannerService {
 
     let imageUrl = dto.image;
     if (file) {
-      imageUrl = await this.cloudinaryService.uploadImage(
-        file,
-        'WebSieuThi/banners',
-      );
+      try {
+        imageUrl = await this.cloudinaryService.uploadImage(
+          file,
+          'WebSieuThi/banners',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
     }
 
     const banner = new this.bannerModel({
@@ -116,10 +120,14 @@ export class BannerService {
 
     let imageUrl = dto.image;
     if (file) {
-      imageUrl = await this.cloudinaryService.uploadImage(
-        file,
-        'WebSieuThi/banners',
-      );
+      try {
+        imageUrl = await this.cloudinaryService.uploadImage(
+          file,
+          'WebSieuThi/banners',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
     }
 
     const updateData: Record<string, any> = { ...dto, image: imageUrl };

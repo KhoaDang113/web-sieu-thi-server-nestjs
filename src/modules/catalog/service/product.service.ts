@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from '../schema/product.schema';
+import { Brand, BrandDocument } from '../schema/brand.schema';
 import { Category, CategoryDocument } from '../schema/category.schema';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
@@ -18,14 +19,140 @@ export class ProductService {
     private productModel: Model<ProductDocument>,
     @InjectModel(Category.name)
     private categoryModel: Model<CategoryDocument>,
+    @InjectModel(Brand.name)
+    private brandModel: Model<BrandDocument>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
+
+  async getProductsAdmin(page: number = 0, limit: number = 10): Promise<any> {
+    const skip = (page - 1) * limit;
+    const products: Product[] = await this.productModel
+      .find({ is_active: true, is_deleted: false })
+      .skip(skip)
+      .limit(limit)
+      .select(
+        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active',
+      )
+      .lean();
+
+    return {
+      total: products.length,
+      page,
+      limit,
+      products,
+    };
+  }
+
+  async searchProducts(
+    key: string | undefined,
+    skip: number,
+    category?: string,
+    brand?: string,
+    sortOrder?: string,
+  ): Promise<any> {
+    const actualLimit: number = skip === 0 ? 40 : 10;
+
+    const filters: Record<string, any> = { is_deleted: false, is_active: true };
+
+    if (key) {
+      filters.$text = { $search: key };
+    }
+    if (category) {
+      const categorySlugs = category.split(' ').filter((slug) => slug.trim());
+      const categoryExists = await this.categoryModel.find({
+        slug: { $in: categorySlugs },
+      });
+      if (!categoryExists || categoryExists.length === 0) {
+        throw new NotFoundException('Category not found');
+      }
+      if (categoryExists.length !== categorySlugs.length) {
+        throw new NotFoundException('Some categories not found');
+      }
+      filters.category_id = {
+        $in: categoryExists.map((cat) => cat._id),
+      };
+    }
+    if (brand) {
+      const brands = brand.split(' ');
+      const brandExists = await this.brandModel.find({
+        slug: { $in: brands },
+      });
+      if (!brandExists || brandExists.length === 0) {
+        throw new NotFoundException('Brand not found');
+      }
+      if (brandExists.length !== brands.length) {
+        throw new NotFoundException('Some brands not found');
+      }
+      filters.brand_id = { $in: brandExists.map((brand) => brand._id) };
+    }
+
+    let sortCriteria: Record<string, any> = {};
+    let useTextScore = false;
+
+    if (sortOrder) {
+      switch (sortOrder?.toLowerCase()) {
+        case 'price-asc':
+          sortCriteria = { final_price: 1 };
+          break;
+        case 'price-desc':
+          sortCriteria = { final_price: -1 };
+          break;
+        case 'hot':
+          sortCriteria = { discount_percent: -1 };
+          break;
+        case 'new':
+          sortCriteria = { created_at: -1 };
+          break;
+        default:
+          sortCriteria = { created_at: -1 };
+      }
+    } else if (key) {
+      useTextScore = true;
+    } else {
+      sortCriteria = { created_at: -1 };
+    }
+
+    const query = this.productModel.find(filters).skip(skip).limit(actualLimit);
+
+    if (useTextScore) {
+      query
+        .select({
+          _id: 1,
+          name: 1,
+          unit: 1,
+          unit_price: 1,
+          image_primary: 1,
+          discount_percent: 1,
+          final_price: 1,
+          stock_status: 1,
+          is_active: 1,
+          category_id: 1,
+          score: { $meta: 'textScore' },
+        })
+        .sort({ score: { $meta: 'textScore' } });
+    } else {
+      query
+        .select(
+          '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id',
+        )
+        .sort(sortCriteria);
+    }
+
+    const products = await query.lean();
+
+    return {
+      total: products.length,
+      skip,
+      actualLimit,
+      products,
+    };
+  }
 
   async getProductsByCategorySlugOrAll(
     categorySlug?: string,
   ): Promise<Product[]> {
     if (!categorySlug) {
-      return this.productModel
+      return await this.productModel
         .find({ is_active: true, is_deleted: false })
         .lean();
     }
@@ -37,7 +164,7 @@ export class ProductService {
       throw new NotFoundException('Category not found');
     }
 
-    return this.productModel
+    return await this.productModel
       .find({ category_id: category._id, is_active: true, is_deleted: false })
       .select(
         'name slug unit_price image_primary discount_percent final_price stock_status',
@@ -129,18 +256,26 @@ export class ProductService {
 
     let imagePrimaryUrl = dto.image_primary;
     if (files?.image_primary && files.image_primary[0]) {
-      imagePrimaryUrl = await this.cloudinaryService.uploadImage(
-        files.image_primary[0],
-        'WebSieuThi/products',
-      );
+      try {
+        imagePrimaryUrl = await this.cloudinaryService.uploadImage(
+          files.image_primary[0],
+          'WebSieuThi/products',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image primary');
+      }
     }
 
     let imagesUrls = dto.images;
     if (files?.images && files.images.length > 0) {
-      imagesUrls = await this.cloudinaryService.uploadMultipleImages(
-        files.images,
-        'WebSieuThi/products',
-      );
+      try {
+        imagesUrls = await this.cloudinaryService.uploadMultipleImages(
+          files.images,
+          'WebSieuThi/products',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading images');
+      }
     }
 
     const product = new this.productModel({
@@ -222,18 +357,26 @@ export class ProductService {
 
     let imagePrimaryUrl = dto.image_primary ?? currentProduct.image_primary;
     if (files?.image_primary && files.image_primary[0]) {
-      imagePrimaryUrl = await this.cloudinaryService.uploadImage(
-        files.image_primary[0],
-        'WebSieuThi/products',
-      );
+      try {
+        imagePrimaryUrl = await this.cloudinaryService.uploadImage(
+          files.image_primary[0],
+          'WebSieuThi/products',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image primary');
+      }
     }
 
     let imagesUrls = dto.images ?? currentProduct.images;
     if (files?.images && files.images.length > 0) {
-      imagesUrls = await this.cloudinaryService.uploadMultipleImages(
-        files.images,
-        'WebSieuThi/products',
-      );
+      try {
+        imagesUrls = await this.cloudinaryService.uploadMultipleImages(
+          files.images,
+          'WebSieuThi/products',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading images');
+      }
     }
 
     const unitPrice = dto.unit_price ?? currentProduct.unit_price;

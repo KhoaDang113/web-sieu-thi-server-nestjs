@@ -18,9 +18,32 @@ import { GetProductDetailDto } from '../dto/get-product-detail.dto';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { AdminGuard } from '../../../common/guards/admin.guard';
+import { SearchProductsDto } from '../dto/search-products.dto';
 @Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
+
+  @UseGuards(AdminGuard)
+  @Get('products-admin')
+  async getProductsAdmin(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ): Promise<any> {
+    return this.productService.getProductsAdmin(page, limit);
+  }
+
+  @Public()
+  @Get('search')
+  async searchProducts(@Query() dto: SearchProductsDto): Promise<any> {
+    const skip = dto.skip ?? 0;
+    return await this.productService.searchProducts(
+      dto.key,
+      skip,
+      dto.category,
+      dto.brand,
+      dto.sortOrder,
+    );
+  }
 
   @Public()
   @Get()

@@ -34,6 +34,9 @@ export class Address {
 
   @Prop({ default: true })
   is_active: boolean;
+
+  @Prop({ default: false })
+  is_deleted: false;
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);

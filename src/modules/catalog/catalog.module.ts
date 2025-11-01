@@ -20,6 +20,10 @@ import { Address, AddressSchema } from './schema/address.schema';
 import { AddressService } from './service/address.service';
 import { AddressController } from './controller/address.controller';
 import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
+import { Brand, BrandSchema } from './schema/brand.schema';
+import { Comment, CommentSchema } from './schema/comment.schema';
+import { CommentService } from './service/comment.service';
+import { CommentController } from './controller/comment.controller';
 
 @Module({
   imports: [
@@ -30,6 +34,8 @@ import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
       { name: Cart.name, schema: CartSchema },
       { name: Banner.name, schema: BannerSchema },
       { name: Address.name, schema: AddressSchema },
+      { name: Brand.name, schema: BrandSchema },
+      { name: Comment.name, schema: CommentSchema },
     ]),
   ],
   controllers: [
@@ -38,6 +44,7 @@ import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
     CartController,
     BannerController,
     AddressController,
+    CommentController,
   ],
   providers: [
     ProductService,
@@ -46,6 +53,7 @@ import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
     CartService,
     BannerService,
     AddressService,
+    CommentService,
   ],
   exports: [
     ProductService,
@@ -53,6 +61,7 @@ import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
     CartService,
     BannerService,
     AddressService,
+    CommentService,
   ],
 })
 export class CatalogModule {}
