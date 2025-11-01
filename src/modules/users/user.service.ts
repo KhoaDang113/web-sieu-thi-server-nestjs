@@ -42,20 +42,29 @@ export class UserService {
     if (role) {
       query.role = role;
     }
-
+    let useTextScore = false;
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-      ];
+      const isNumeric = /^\d+$/.test(search);
+      if (isNumeric) {
+        const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        query.phone = { $regex: `^${escaped}` };
+      } else {
+        query.$text = { $search: search };
+        useTextScore = true;
+      }
     }
 
     const [users, total] = await Promise.all([
       this.userModel
         .find(query)
         .select('name email phone avatar role isLocked createdAt')
-        .sort({ createdAt: -1 })
+        .sort(
+          useTextScore
+            ? {
+                score: { $meta: 'textScore' },
+              }
+            : { createdAt: -1 },
+        )
         .skip(skip)
         .limit(limit)
         .lean(),

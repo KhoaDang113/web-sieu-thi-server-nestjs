@@ -6,6 +6,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { CloudinaryModule } from './shared/cloudinary/cloudinary.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { APP_GUARD } from '@nestjs/core';
+import { UserModule } from './modules/users/user.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { APP_GUARD } from '@nestjs/core';
     AuthModule,
     CatalogModule,
     CloudinaryModule,
+    UserModule,
   ],
   providers: [
     {

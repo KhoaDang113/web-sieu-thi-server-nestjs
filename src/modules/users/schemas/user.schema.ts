@@ -85,3 +85,14 @@ UserSchema.methods.generateVerificationCode = function (this: User): number {
   this.phoneVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
   return code;
 };
+
+UserSchema.index(
+  { name: 'text', email: 'text', phone: 'text' },
+  {
+    weights: {
+      name: 5,
+      email: 3,
+      phone: 2,
+    },
+  },
+);
