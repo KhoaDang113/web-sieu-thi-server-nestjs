@@ -84,10 +84,18 @@ export class AddressService {
       );
     }
 
+    // Loại bỏ các field undefined
+    const updateData: Record<string, any> = { ...dto };
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
     const updated = await this.addressModel
       .findOneAndUpdate(
         { _id: addressObjectId, user_id: userObjectId },
-        { $set: dto },
+        { $set: updateData },
         { new: true },
       )
       .exec();

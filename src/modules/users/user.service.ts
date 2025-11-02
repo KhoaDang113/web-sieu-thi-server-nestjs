@@ -1,16 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserByAdminDto } from './dto/update-user-by-admin.dto';
 import { GetUsersDto } from './dto/get-users.dto';
+import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async getUserProfile(userId: string) {
@@ -23,9 +29,29 @@ export class UserService {
     return user;
   }
 
-  async updateUserProfile(userId: string, updateUserDto: UpdateUserProfileDto) {
+  async updateUserProfile(
+    userId: string,
+    updateUserDto: UpdateUserProfileDto,
+    file: Express.Multer.File,
+  ): Promise<User> {
+    let avatar_url = updateUserDto.avatar;
+
+    if (file) {
+      try {
+        avatar_url = await this.cloudinaryService.uploadImage(
+          file,
+          'WebSieuThi/avatars',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
+    }
     const user = await this.userModel
-      .findByIdAndUpdate(userId, updateUserDto, { new: true })
+      .findByIdAndUpdate(
+        userId,
+        { ...updateUserDto, avatar: avatar_url },
+        { new: true },
+      )
       .select('name email phone avatar');
     if (!user) {
       throw new NotFoundException('User not found');
@@ -100,13 +126,32 @@ export class UserService {
     return user;
   }
 
-  async updateUserByAdmin(userId: string, updateDto: UpdateUserByAdminDto) {
+  async updateUserByAdmin(
+    userId: string,
+    updateDto: UpdateUserByAdminDto,
+    file: Express.Multer.File,
+  ) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new NotFoundException('Invalid user ID');
     }
 
+    let avatar_url = updateDto.avatar;
+    if (file) {
+      try {
+        avatar_url = await this.cloudinaryService.uploadImage(
+          file,
+          'WebSieuThi/avatars',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
+    }
     const user = await this.userModel
-      .findByIdAndUpdate(userId, updateDto, { new: true })
+      .findByIdAndUpdate(
+        userId,
+        { ...updateDto, avatar: avatar_url },
+        { new: true },
+      )
       .select(
         'name email phone avatar role isLocked emailVerifiedAt isPhoneVerified authProvider',
       );

@@ -29,6 +29,8 @@ export class Category {
 
 export const CategorySchema = SchemaFactory.createForClass(Category);
 
+CategorySchema.index({ name: 'text', description: 'text' });
+
 CategorySchema.set('toJSON', {
   virtuals: true,
   versionKey: false,

@@ -114,10 +114,14 @@ export class CategoryService {
 
     let imageUrl = createCategoryDto.image;
     if (file) {
-      imageUrl = await this.cloudinaryService.uploadImage(
-        file,
-        'WebSieuThi/categories',
-      );
+      try {
+        imageUrl = await this.cloudinaryService.uploadImage(
+          file,
+          'WebSieuThi/categories',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
     }
 
     const category = new this.categoryModel({
@@ -177,19 +181,33 @@ export class CategoryService {
 
     let imageUrl = updateCategoryDto.image;
     if (file) {
-      imageUrl = await this.cloudinaryService.uploadImage(
-        file,
-        'WebSieuThi/categories',
-      );
+      try {
+        imageUrl = await this.cloudinaryService.uploadImage(
+          file,
+          'WebSieuThi/categories',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
     }
 
     const updateData: Record<string, any> = {
       ...updateCategoryDto,
-      image: imageUrl,
     };
+
+    if (imageUrl) {
+      updateData.image = imageUrl;
+    }
     if (updateCategoryDto.parent_id) {
       updateData.parent_id = new Types.ObjectId(updateCategoryDto.parent_id);
     }
+
+    // Loại bỏ các field undefined
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
     try {
       const category = await this.categoryModel
@@ -247,5 +265,35 @@ export class CategoryService {
     }
 
     return { message: 'Category deleted successfully' };
+  }
+
+  async getCategoriesAdmin(
+    page: number = 1,
+    limit: number = 10,
+    key?: string,
+  ): Promise<any> {
+    const skip = (page - 1) * limit;
+    const query: Record<string, any> = { is_deleted: false };
+
+    if (key && typeof key === 'string' && key.trim().length > 0) {
+      query.$text = { $search: key.trim() };
+    }
+
+    const [categories, total] = await Promise.all([
+      this.categoryModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .select('_id name slug image is_active parent_id')
+        .lean(),
+      this.categoryModel.countDocuments(query),
+    ]);
+
+    return {
+      total,
+      page,
+      limit,
+      categories,
+    };
   }
 }

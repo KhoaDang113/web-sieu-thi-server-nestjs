@@ -399,6 +399,13 @@ export class ProductService {
       updateData.brand_id = new Types.ObjectId(dto.brand_id);
     }
 
+    // Loại bỏ các field undefined
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
     try {
       const updated = await this.productModel
         .findByIdAndUpdate(id, { $set: updateData }, { new: true })

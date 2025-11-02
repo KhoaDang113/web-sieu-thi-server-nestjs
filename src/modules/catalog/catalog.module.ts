@@ -27,6 +27,9 @@ import { RatingController } from './controller/rating.controller';
 import { Comment, CommentSchema } from './schema/comment.schema';
 import { CommentService } from './service/comment.service';
 import { CommentController } from './controller/comment.controller';
+import { Combo, ComboSchema } from './schema/combo.schema';
+import { ComboService } from './service/combo.service';
+import { ComboController } from './controller/combo.controller';
 
 @Module({
   imports: [
@@ -40,6 +43,7 @@ import { CommentController } from './controller/comment.controller';
       { name: Brand.name, schema: BrandSchema },
       { name: Rating.name, schema: RatingSchema },
       { name: Comment.name, schema: CommentSchema },
+      { name: Combo.name, schema: ComboSchema },
     ]),
   ],
   controllers: [
@@ -50,6 +54,7 @@ import { CommentController } from './controller/comment.controller';
     AddressController,
     RatingController,
     CommentController,
+    ComboController,
   ],
   providers: [
     ProductService,
@@ -60,6 +65,7 @@ import { CommentController } from './controller/comment.controller';
     AddressService,
     RatingService,
     CommentService,
+    ComboService,
   ],
   exports: [
     ProductService,
@@ -69,6 +75,7 @@ import { CommentController } from './controller/comment.controller';
     AddressService,
     RatingService,
     CommentService,
+    ComboService,
   ],
 })
 export class CatalogModule {}

@@ -130,10 +130,21 @@ export class BannerService {
       }
     }
 
-    const updateData: Record<string, any> = { ...dto, image: imageUrl };
+    const updateData: Record<string, any> = { ...dto };
+
+    if (imageUrl) {
+      updateData.image = imageUrl;
+    }
     if (dto.category_id) {
       updateData.category_id = new Types.ObjectId(dto.category_id);
     }
+
+    // Loại bỏ các field undefined
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
     const updated = await this.bannerModel
       .findOneAndUpdate(

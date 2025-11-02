@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -20,6 +21,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('categories')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
+
+  @UseGuards(AdminGuard)
+  @Get('categories-admin')
+  async getCategoriesAdmin(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Query('key') key?: string,
+  ): Promise<any> {
+    return await this.categoryService.getCategoriesAdmin(page, limit, key);
+  }
 
   @Public()
   @Get()
