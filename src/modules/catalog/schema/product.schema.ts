@@ -37,6 +37,9 @@ export class Product {
   @Prop({ type: [String] })
   images: string[];
 
+  @Prop({ type: Number, default: 0, min: 0 })
+  quantity: number;
+
   @Prop({
     type: String,
     enum: ['in_stock', 'out_of_stock', 'preorder'],

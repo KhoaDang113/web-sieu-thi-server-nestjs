@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Address, AddressDocument } from '../schema/address.schema';
-import { CreateAddressDto } from '../dto/create-address.dto';
-import { UpdateAddressDto } from '../dto/update-address.dto';
+import { Address, AddressDocument } from './schema/address.schema';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 
 @Injectable()
 export class AddressService {

@@ -6,10 +6,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Comment, CommentDocument } from '../schema/comment.schema';
-import { CreateCommentDto } from '../dto/create-comment.dto';
-import { UpdateCommentDto } from '../dto/update-comment.dto';
-import { GetCommentsDto } from '../dto/get-comments.dto';
+import { Comment, CommentDocument } from './schema/comment.schema';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
+import { GetCommentsDto } from './dto/get-comments.dto';
 
 @Injectable()
 export class CommentService {

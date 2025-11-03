@@ -7,6 +7,10 @@ import { CloudinaryModule } from './shared/cloudinary/cloudinary.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { UserModule } from './modules/users/user.module';
+import { AddressModule } from './modules/address/address.module';
+import { CommentModule } from './modules/comment/comment.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { OrderModule } from './modules/order/order.module';
 
 @Module({
   imports: [
@@ -32,6 +36,10 @@ import { UserModule } from './modules/users/user.module';
     CatalogModule,
     CloudinaryModule,
     UserModule,
+    AddressModule,
+    CommentModule,
+    InventoryModule,
+    OrderModule,
   ],
   providers: [
     {

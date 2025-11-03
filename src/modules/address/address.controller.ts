@@ -10,9 +10,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { AddressService } from '../service/address.service';
-import { CreateAddressDto } from '../dto/create-address.dto';
-import { UpdateAddressDto } from '../dto/update-address.dto';
+import { AddressService } from './address.service';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 
 @Controller('addresses')
 export class AddressController {
@@ -24,7 +24,7 @@ export class AddressController {
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    return this.addressService.findAllByUser(userId);
+    return await this.addressService.findAllByUser(userId);
   }
 
   @Get(':id')
@@ -33,7 +33,7 @@ export class AddressController {
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    return this.addressService.findOneByUser(userId, id);
+    return await this.addressService.findOneByUser(userId, id);
   }
 
   @Post()
@@ -42,7 +42,7 @@ export class AddressController {
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    return this.addressService.create(userId, dto);
+    return await this.addressService.create(userId, dto);
   }
 
   @Put(':id')
@@ -55,7 +55,7 @@ export class AddressController {
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    return this.addressService.update(userId, id, dto);
+    return await this.addressService.update(userId, id, dto);
   }
 
   @Delete(':id')
@@ -64,6 +64,6 @@ export class AddressController {
     if (!userId) {
       throw new UnauthorizedException('User not found');
     }
-    return this.addressService.remove(userId, id);
+    return await this.addressService.remove(userId, id);
   }
 }
