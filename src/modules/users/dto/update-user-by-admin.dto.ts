@@ -18,6 +18,10 @@ export class UpdateUserByAdminDto {
   avatar?: string;
 
   @IsOptional()
+  @IsEnum(['male', 'female', 'other'])
+  gender?: string;
+
+  @IsOptional()
   @IsEnum(['user', 'admin'])
   role?: string;
 

@@ -49,6 +49,9 @@ export class User {
   @Prop()
   avatar?: string;
 
+  @Prop({ enum: ['male', 'female', 'other'], default: null })
+  gender?: string;
+
   @Prop()
   resetPasswordToken?: string;
 

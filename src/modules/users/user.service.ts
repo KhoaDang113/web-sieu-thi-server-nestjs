@@ -22,7 +22,7 @@ export class UserService {
   async getUserProfile(userId: string) {
     const user = await this.userModel
       .findById(userId)
-      .select('name email phone avatar');
+      .select('name email phone avatar gender');
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -52,7 +52,7 @@ export class UserService {
         { ...updateUserDto, avatar: avatar_url },
         { new: true },
       )
-      .select('name email phone avatar');
+      .select('name email phone avatar gender');
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -83,7 +83,7 @@ export class UserService {
     const [users, total] = await Promise.all([
       this.userModel
         .find(query)
-        .select('name email phone avatar role isLocked createdAt')
+        .select('name email phone avatar gender role isLocked createdAt')
         .sort(
           useTextScore
             ? {
@@ -116,7 +116,7 @@ export class UserService {
     const user = await this.userModel
       .findById(userId)
       .select(
-        'name email phone avatar role isLocked emailVerifiedAt isPhoneVerified authProvider createdAt updatedAt',
+        'name email phone avatar gender role isLocked emailVerifiedAt isPhoneVerified authProvider createdAt updatedAt',
       );
 
     if (!user) {
@@ -153,7 +153,7 @@ export class UserService {
         { new: true },
       )
       .select(
-        'name email phone avatar role isLocked emailVerifiedAt isPhoneVerified authProvider',
+        'name email phone avatar gender role isLocked emailVerifiedAt isPhoneVerified authProvider',
       );
 
     if (!user) {

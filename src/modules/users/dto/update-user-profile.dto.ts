@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 
 export class UpdateUserProfileDto {
   @IsOptional()
@@ -16,4 +16,8 @@ export class UpdateUserProfileDto {
   @IsOptional()
   @IsString()
   avatar?: string;
+
+  @IsOptional()
+  @IsEnum(['male', 'female', 'other'])
+  gender?: string;
 }

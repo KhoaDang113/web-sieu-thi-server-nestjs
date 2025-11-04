@@ -4,6 +4,8 @@ export interface IUser {
   email: string;
   phone: string;
   role: string;
+  gender?: string;
+  avatar?: string;
   isLocked: boolean;
   isVerified: boolean;
   verificationCode: number;
