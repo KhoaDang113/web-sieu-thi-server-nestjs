@@ -57,6 +57,7 @@ export class AuthController {
         id: user._id?.toString(),
         name: user.name,
         email: user.email,
+        avatar: user.avatar,
         isPhoneVerified: user.isPhoneVerified,
       },
     });
@@ -113,6 +114,7 @@ export class AuthController {
           name: user.name,
           phone: user.phone,
           isVerified: user.isVerified,
+          avatar: user.avatar,
         },
       });
     } catch (error) {
@@ -163,6 +165,7 @@ export class AuthController {
         id: user._id?.toString(),
         name: user.name,
         email: user.email,
+        avatar: user.avatar,
         isPhoneVerified: user.isPhoneVerified,
       },
     });
