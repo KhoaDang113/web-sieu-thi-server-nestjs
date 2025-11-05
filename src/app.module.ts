@@ -11,6 +11,7 @@ import { AddressModule } from './modules/address/address.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -30,6 +31,27 @@ import { OrderModule } from './modules/order/order.module';
           retryDelay: 1000,
         };
       },
+      inject: [ConfigService],
+    }),
+
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get<string>('REDIS_HOST') || 'localhost',
+          port: config.get<number>('REDIS_PORT') || 6379,
+          password: config.get<string>('REDIS_PASSWORD'),
+        },
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+          removeOnComplete: 100,
+          removeOnFail: 500,
+        },
+      }),
       inject: [ConfigService],
     }),
     AuthModule,
