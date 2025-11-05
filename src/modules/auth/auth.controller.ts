@@ -292,7 +292,7 @@ export class AuthController {
     this.setTokenCookies(res, accessToken, refreshToken);
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    return res.redirect(`${frontendUrl}`);
+    return res.redirect(`${frontendUrl}/auth-callback`);
   }
 
   @Public()
