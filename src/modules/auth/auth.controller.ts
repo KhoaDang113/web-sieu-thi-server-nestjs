@@ -59,6 +59,7 @@ export class AuthController {
         email: user.email,
         avatar: user.avatar,
         isPhoneVerified: user.isPhoneVerified,
+        role: user.role,
       },
     });
   }
@@ -115,6 +116,7 @@ export class AuthController {
           phone: user.phone,
           isVerified: user.isVerified,
           avatar: user.avatar,
+          role: user.role,
         },
       });
     } catch (error) {
@@ -168,6 +170,7 @@ export class AuthController {
         email: user.email,
         avatar: user.avatar,
         isPhoneVerified: user.isPhoneVerified,
+        role: user.role,
       },
     });
   }
