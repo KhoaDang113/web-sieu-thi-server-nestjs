@@ -8,6 +8,7 @@ import { Address, AddressSchema } from '../address/schema/address.schema';
 import { InventoryModule } from '../inventory/inventory.module';
 import { BullModule } from '@nestjs/bullmq';
 import { OrderProcessor } from './queue/order.processor';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { OrderProcessor } from './queue/order.processor';
       name: 'order-queue',
     }),
     InventoryModule,
+    RealtimeModule,
   ],
   controllers: [OrderController],
   providers: [OrderService, OrderProcessor],

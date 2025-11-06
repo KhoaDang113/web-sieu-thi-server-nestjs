@@ -65,6 +65,9 @@ export class Order {
   @Prop({ type: Date, default: null })
   cancelled_at: Date;
 
+  @Prop({ type: String, default: null })
+  cancel_reason: string;
+
   @Prop({ type: Boolean, default: false })
   is_deleted: boolean;
 }

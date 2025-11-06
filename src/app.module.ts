@@ -12,6 +12,7 @@ import { CommentModule } from './modules/comment/comment.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
 import { BullModule } from '@nestjs/bullmq';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { BullModule } from '@nestjs/bullmq';
     CommentModule,
     InventoryModule,
     OrderModule,
+    RealtimeModule,
   ],
   providers: [
     {

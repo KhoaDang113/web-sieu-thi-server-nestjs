@@ -282,4 +282,61 @@ export class InventoryService {
 
     return product;
   }
+
+  async returnInventoryForOrder(
+    items: Array<{ product_id: string; quantity: number }>,
+    orderId: string,
+    session?: ClientSession,
+  ): Promise<InventoryTransaction[]> {
+    const transactions: InventoryTransaction[] = [];
+
+    for (const item of items) {
+      const productObjectId = this.ensureObjectId(
+        item.product_id,
+        'product id',
+      );
+
+      const product = await this.productModel.findOneAndUpdate(
+        {
+          _id: productObjectId,
+          is_deleted: false,
+        },
+        {
+          $inc: { quantity: item.quantity },
+        },
+        {
+          new: true,
+          session: session || undefined,
+        },
+      );
+
+      if (!product) {
+        throw new NotFoundException(`Product ${item.product_id} not found`);
+      }
+
+      const quantityBefore = product.quantity - item.quantity;
+      const quantityAfter = product.quantity;
+
+      await this.updateStockStatus(productObjectId, session);
+
+      const transaction = new this.inventoryTransactionModel({
+        product_id: productObjectId,
+        type: 'import',
+        quantity: item.quantity,
+        quantity_before: quantityBefore,
+        quantity_after: quantityAfter,
+        order_id: this.ensureObjectId(orderId, 'order id'),
+        note: 'Order cancelled - inventory returned',
+      });
+
+      if (session) {
+        transaction.$session(session);
+      }
+
+      const savedTransaction = await transaction.save();
+      transactions.push(savedTransaction);
+    }
+
+    return transactions;
+  }
 }

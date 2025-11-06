@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { OrderService } from '../order.service';
 import { CreateOrderDto } from '../dto/create-order.dto';
 import { Types, Document } from 'mongoose';
+import { OrderRealtimeService } from 'src/modules/realtime/order-realtime.service';
 
 interface OrderJobData {
   userId: string;
@@ -14,7 +15,10 @@ interface OrderJobData {
 export class OrderProcessor extends WorkerHost {
   private readonly logger = new Logger(OrderProcessor.name);
 
-  constructor(private readonly orderService: OrderService) {
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly orderRealtimeService: OrderRealtimeService,
+  ) {
     super();
   }
 
@@ -24,12 +28,24 @@ export class OrderProcessor extends WorkerHost {
     this.logger.log(`Processing order for user ${userId}, Job ID: ${job.id}`);
     this.logger.log(`Items: ${JSON.stringify(createOrderDto.items)}`);
 
+    this.orderRealtimeService.orderProcessing(userId, {
+      jobId: job.id as string,
+      message: 'Đang xử lý đơn hàng',
+    });
+
     try {
       const order = await this.orderService.createOrder(userId, createOrderDto);
 
       const orderDoc = order as unknown as Document & { _id: Types.ObjectId };
       const orderId = orderDoc._id.toString();
       this.logger.log(`Order ${orderId} created successfully`);
+
+      this.orderRealtimeService.orderSuccess(userId, {
+        jobId: job.id as string,
+        orderId,
+        message: 'Đơn hàng đã được tạo thành công',
+        order,
+      });
 
       return {
         success: true,
@@ -44,7 +60,16 @@ export class OrderProcessor extends WorkerHost {
 
       this.logger.error(`Failed to create order: ${errorMessage}`, errorStack);
 
-      throw error;
+      this.orderRealtimeService.orderError(userId, {
+        jobId: job.id as string,
+        message: errorMessage,
+        error: errorMessage,
+      });
+
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(errorMessage);
     }
   }
 }
