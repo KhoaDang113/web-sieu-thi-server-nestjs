@@ -31,7 +31,7 @@ export class ProductService {
       .skip(skip)
       .limit(limit)
       .select(
-        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active',
+        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active quantity',
       )
       .lean();
 
@@ -133,7 +133,7 @@ export class ProductService {
     } else {
       query
         .select(
-          '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id',
+          '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id quantity',
         )
         .sort(sortCriteria);
     }
@@ -167,7 +167,7 @@ export class ProductService {
     return await this.productModel
       .find({ category_id: category._id, is_active: true, is_deleted: false })
       .select(
-        'name slug unit_price image_primary discount_percent final_price stock_status',
+        'name slug unit_price image_primary discount_percent final_price stock_status quantity',
       )
       .lean();
   }
@@ -180,7 +180,7 @@ export class ProductService {
     const product = await this.productModel
       .findOne({ _id: productId, is_active: true, is_deleted: false })
       .select(
-        'name slug image_primary unit_price discount_percent final_price stock_status images',
+        'name slug image_primary unit_price discount_percent final_price stock_status images quantity',
       )
       .lean();
 
@@ -203,7 +203,7 @@ export class ProductService {
           discount_percent: { $gt: 0 },
         })
         .select(
-          'name slug unit_price discount_percent final_price stock_status image_primary',
+          'name slug unit_price discount_percent final_price stock_status image_primary quantity',
         )
         .lean();
     }
@@ -223,7 +223,7 @@ export class ProductService {
         discount_percent: { $gt: 0 },
       })
       .select(
-        'name slug unit_price image_primary discount_percent final_price stock_status',
+        'name slug unit_price image_primary discount_percent final_price stock_status quantity',
       )
       .lean();
 
@@ -305,6 +305,7 @@ export class ProductService {
         is_deleted: savedProduct.is_deleted,
         image_primary: savedProduct.image_primary,
         images: savedProduct.images,
+        quantity: savedProduct.quantity,
       } as Product;
     } catch (error: any) {
       if (
