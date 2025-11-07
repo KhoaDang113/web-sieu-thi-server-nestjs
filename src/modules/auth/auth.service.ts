@@ -85,6 +85,11 @@ export class AuthService {
       throw new HttpException('Email already registered', HttpStatus.CONFLICT);
     }
 
+    const existingName = await this.userModel.findOne({ name });
+    if (existingName) {
+      throw new BadRequestException('Tên này đã được sử dụng');
+    }
+
     const newUser = new this.userModel({
       email,
       password,
