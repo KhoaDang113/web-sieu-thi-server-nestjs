@@ -428,7 +428,6 @@ export class OrderService {
     session.startTransaction();
 
     try {
-      // Hoàn trả kho nếu order chưa cancelled
       if (order.status !== 'cancelled') {
         const items = order.items.map((item) => ({
           product_id: item.product_id.toString(),
@@ -442,7 +441,6 @@ export class OrderService {
         );
       }
 
-      // Cập nhật order
       order.status = 'cancelled';
       order.cancelled_at = new Date();
       order.cancel_reason = cancelReason || 'Cancelled by staff';
