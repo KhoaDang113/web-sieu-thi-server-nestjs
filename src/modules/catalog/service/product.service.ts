@@ -147,7 +147,6 @@ export class ProductService {
       products,
     };
   }
-
   async getProductsByCategorySlugOrAll(
     categorySlug?: string,
   ): Promise<Product[]> {
@@ -164,10 +163,21 @@ export class ProductService {
       throw new NotFoundException('Category not found');
     }
 
+    const subCategories = await this.categoryModel
+      .find({ parent_id: category._id })
+      .select('_id')
+      .lean();
+
+    const categoryIds = [category._id, ...subCategories.map((sub) => sub._id)];
+
     return await this.productModel
-      .find({ category_id: category._id, is_active: true, is_deleted: false })
+      .find({
+        category_id: { $in: categoryIds },
+        is_active: true,
+        is_deleted: false,
+      })
       .select(
-        'name slug unit_price image_primary discount_percent final_price stock_status quantity',
+        'name slug unit_price image_primary discount_percent final_price stock_status',
       )
       .lean();
   }
@@ -193,8 +203,6 @@ export class ProductService {
   async getProductPromotionByCategorySlugOrAll(
     categorySlug?: string,
   ): Promise<Product[]> {
-    console.log(categorySlug);
-
     if (!categorySlug) {
       return this.productModel
         .find({
@@ -207,17 +215,25 @@ export class ProductService {
         )
         .lean();
     }
-    const categoryId = await this.categoryModel
-      .findOne({ slug: categorySlug })
-      .select('_id');
 
-    if (!categoryId) {
+    const category = await this.categoryModel
+      .findOne({ slug: categorySlug })
+      .lean();
+
+    if (!category) {
       throw new NotFoundException('Category not found');
     }
 
+    const subCategories = await this.categoryModel
+      .find({ parent_id: category._id })
+      .select('_id')
+      .lean();
+
+    const categoryIds = [category._id, ...subCategories.map((sub) => sub._id)];
+
     const productsPromotion = await this.productModel
       .find({
-        category_id: categoryId._id,
+        category_id: { $in: categoryIds },
         is_active: true,
         is_deleted: false,
         discount_percent: { $gt: 0 },
