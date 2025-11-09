@@ -20,8 +20,8 @@ export class Address {
   @Prop({ required: true })
   ward: string;
 
-  @Prop({ required: true })
-  district: string;
+  @Prop({ required: false })
+  district?: string;
 
   @Prop({ required: true })
   city: string;
