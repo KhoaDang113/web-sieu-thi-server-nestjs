@@ -153,6 +153,9 @@ export class ProductService {
     if (!categorySlug) {
       return await this.productModel
         .find({ is_active: true, is_deleted: false })
+        .select(
+          '_id name slug unit unit_price image_primary discount_percent final_price stock_status quantity is_active brand_id category_id',
+        )
         .lean();
     }
 
@@ -177,7 +180,7 @@ export class ProductService {
         is_deleted: false,
       })
       .select(
-        'name slug unit_price image_primary discount_percent final_price stock_status',
+        '_id name slug unit unit_price image_primary discount_percent final_price stock_status quantity is_active brand_id category_id',
       )
       .lean();
   }
@@ -211,7 +214,7 @@ export class ProductService {
           discount_percent: { $gt: 0 },
         })
         .select(
-          'name slug unit_price discount_percent final_price stock_status image_primary quantity',
+          '_id name slug unit unit_price discount_percent final_price stock_status image_primary quantity is_active brand_id category_id',
         )
         .lean();
     }
@@ -239,7 +242,7 @@ export class ProductService {
         discount_percent: { $gt: 0 },
       })
       .select(
-        'name slug unit_price image_primary discount_percent final_price stock_status quantity',
+        '_id name slug unit unit_price image_primary discount_percent final_price stock_status quantity is_active brand_id category_id',
       )
       .lean();
 
