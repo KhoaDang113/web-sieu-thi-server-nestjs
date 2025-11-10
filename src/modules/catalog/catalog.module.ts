@@ -30,6 +30,8 @@ import { RatingController } from './controller/rating.controller';
 import { Combo, ComboSchema } from './schema/combo.schema';
 import { ComboService } from './service/combo.service';
 import { ComboController } from './controller/combo.controller';
+import { BrandService } from './service/brand.service';
+import { BrandController } from './controller/brand.controller';
 // import { Order, OrderSchema } from '../order/schema/order.schema';
 // import { OrderService } from '../order/order.service';
 // import { OrderController } from '../order/order.controller';
@@ -60,6 +62,7 @@ import { ComboController } from './controller/combo.controller';
     RatingController,
     // CommentController,
     ComboController,
+    BrandController,
     // OrderController,
   ],
   providers: [
@@ -72,6 +75,7 @@ import { ComboController } from './controller/combo.controller';
     RatingService,
     // CommentService,
     ComboService,
+    BrandService,
     // OrderService,
   ],
   exports: [
@@ -83,6 +87,7 @@ import { ComboController } from './controller/combo.controller';
     RatingService,
     // CommentService,
     ComboService,
+    BrandService,
     // OrderService,
   ],
 })

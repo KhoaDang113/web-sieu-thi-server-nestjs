@@ -22,7 +22,7 @@ export class Brand {
   is_active: boolean;
 
   @Prop({ default: false })
-  is_deleted: false;
+  is_deleted: boolean;
 }
 
 export const BrandSchema = SchemaFactory.createForClass(Brand);
