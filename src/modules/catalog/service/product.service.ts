@@ -31,7 +31,7 @@ export class ProductService {
       .skip(skip)
       .limit(limit)
       .select(
-        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active',
+        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active quantity',
       )
       .lean();
 
@@ -133,7 +133,7 @@ export class ProductService {
     } else {
       query
         .select(
-          '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id',
+          '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id quantity',
         )
         .sort(sortCriteria);
     }
@@ -147,13 +147,15 @@ export class ProductService {
       products,
     };
   }
-
   async getProductsByCategorySlugOrAll(
     categorySlug?: string,
   ): Promise<Product[]> {
     if (!categorySlug) {
       return await this.productModel
         .find({ is_active: true, is_deleted: false })
+        .select(
+          '_id name slug unit unit_price image_primary discount_percent final_price stock_status quantity is_active brand_id category_id',
+        )
         .lean();
     }
 
@@ -164,10 +166,21 @@ export class ProductService {
       throw new NotFoundException('Category not found');
     }
 
+    const subCategories = await this.categoryModel
+      .find({ parent_id: category._id })
+      .select('_id')
+      .lean();
+
+    const categoryIds = [category._id, ...subCategories.map((sub) => sub._id)];
+
     return await this.productModel
-      .find({ category_id: category._id, is_active: true, is_deleted: false })
+      .find({
+        category_id: { $in: categoryIds },
+        is_active: true,
+        is_deleted: false,
+      })
       .select(
-        'name slug unit_price image_primary discount_percent final_price stock_status',
+        '_id name slug unit unit_price image_primary discount_percent final_price stock_status quantity is_active brand_id category_id',
       )
       .lean();
   }
@@ -180,7 +193,7 @@ export class ProductService {
     const product = await this.productModel
       .findOne({ _id: productId, is_active: true, is_deleted: false })
       .select(
-        'name slug image_primary unit_price discount_percent final_price stock_status images',
+        'name slug image_primary unit_price discount_percent final_price stock_status images quantity',
       )
       .lean();
 
@@ -193,8 +206,6 @@ export class ProductService {
   async getProductPromotionByCategorySlugOrAll(
     categorySlug?: string,
   ): Promise<Product[]> {
-    console.log(categorySlug);
-
     if (!categorySlug) {
       return this.productModel
         .find({
@@ -203,27 +214,35 @@ export class ProductService {
           discount_percent: { $gt: 0 },
         })
         .select(
-          'name slug unit_price discount_percent final_price stock_status image_primary',
+          '_id name slug unit unit_price discount_percent final_price stock_status image_primary quantity is_active brand_id category_id',
         )
         .lean();
     }
-    const categoryId = await this.categoryModel
-      .findOne({ slug: categorySlug })
-      .select('_id');
 
-    if (!categoryId) {
+    const category = await this.categoryModel
+      .findOne({ slug: categorySlug })
+      .lean();
+
+    if (!category) {
       throw new NotFoundException('Category not found');
     }
 
+    const subCategories = await this.categoryModel
+      .find({ parent_id: category._id })
+      .select('_id')
+      .lean();
+
+    const categoryIds = [category._id, ...subCategories.map((sub) => sub._id)];
+
     const productsPromotion = await this.productModel
       .find({
-        category_id: categoryId._id,
+        category_id: { $in: categoryIds },
         is_active: true,
         is_deleted: false,
         discount_percent: { $gt: 0 },
       })
       .select(
-        'name slug unit_price image_primary discount_percent final_price stock_status',
+        '_id name slug unit unit_price image_primary discount_percent final_price stock_status quantity is_active brand_id category_id',
       )
       .lean();
 
@@ -305,6 +324,7 @@ export class ProductService {
         is_deleted: savedProduct.is_deleted,
         image_primary: savedProduct.image_primary,
         images: savedProduct.images,
+        quantity: savedProduct.quantity,
       } as Product;
     } catch (error: any) {
       if (

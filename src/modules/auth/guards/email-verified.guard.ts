@@ -31,11 +31,9 @@ export class EmailVerifiedGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<Request>();
     const payload = request.user as JwtPayload;
-    console.log('payload 1', payload);
     if (!payload || !payload.id) {
       throw new ForbiddenException('User not authenticated');
     }
-    console.log('payload 2', payload);
 
     try {
       const user = await this.userModel

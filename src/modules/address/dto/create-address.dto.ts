@@ -17,9 +17,9 @@ export class CreateAddressDto {
   @IsString()
   ward: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  district: string;
+  district?: string;
 
   @IsNotEmpty()
   @IsString()
