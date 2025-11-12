@@ -46,12 +46,72 @@ export class AuthService {
   ) {}
 
   private async sendEmailOtp(email: string, code: string) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verifyUrl = `${frontendUrl}/verify-email?email=${encodeURIComponent(email)}&code=${code}`;
+
     const html = `
-      <div>
-        <h2>Mã xác thực</h2>
-        <p>Mã OTP: <b>${code}</b></p>
-        <p>Hiệu lực ${OTP_TTL_MIN} phút.</p>
-      </div>`;
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mã xác thực đăng ký</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+          <tr>
+            <td align="center" style="padding: 40px 20px;">
+              <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <!-- Header -->
+                <tr>
+                  <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #00A859 0%, #00C853 100%); border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Mã xác thực đăng ký</h1>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px;">
+                    <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                      Xin chào,
+                    </p>
+                    <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
+                      Cảm ơn bạn đã đăng ký tài khoản. Vui lòng sử dụng mã OTP bên dưới để xác thực email của bạn.
+                    </p>
+                    
+                    <!-- OTP Box -->
+                    <div style="background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-radius: 8px; padding: 30px; text-align: center; margin: 30px 0;">
+                      <p style="margin: 0 0 15px; color: #666666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Mã xác thực của bạn</p>
+                      <div style="font-size: 36px; font-weight: 700; color: #00A859; letter-spacing: 8px; margin: 15px 0; font-family: 'Courier New', monospace;">${code}</div>
+                      <a href="${verifyUrl}" target="_self" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #00A859 0%, #00C853 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; margin-top: 15px; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0, 168, 89, 0.3);">
+                        Xác nhận & sao chép OTP
+                      </a>
+                    </div>
+                    
+                    <p style="margin: 30px 0 0; color: #999999; font-size: 14px; text-align: center;">
+                      ⏱️ Mã này có hiệu lực trong <strong style="color: #00A859;">${OTP_TTL_MIN} phút</strong>
+                    </p>
+                    
+                    <p style="margin: 30px 0 0; color: #999999; font-size: 12px; line-height: 1.6;">
+                      <strong>Lưu ý:</strong> Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này. Mã OTP sẽ tự động hết hạn sau ${OTP_TTL_MIN} phút.
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 30px 40px; background-color: #f8f9fa; border-radius: 0 0 12px 12px; text-align: center;">
+                    <p style="margin: 0; color: #999999; font-size: 12px;">
+                      © ${new Date().getFullYear()} Siêu thị. Tất cả quyền được bảo lưu.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>`;
     await this.mailer.sendEmail({
       to: email,
       subject: 'Xác thực đăng ký',
@@ -60,12 +120,78 @@ export class AuthService {
   }
 
   private async sendResetPasswordEmail(email: string, code: string) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/forgot-password?email=${encodeURIComponent(email)}&code=${code}`;
+
     const html = `
-      <div>
-        <h2>Mã xác thực</h2>
-        <p>Mã OTP: <b>${code}</b></p>
-        <p>Hiệu lực ${OTP_TTL_MIN} phút.</p>
-      </div>`;
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mã xác thực đặt lại mật khẩu</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+          <tr>
+            <td align="center" style="padding: 40px 20px;">
+              <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <!-- Header -->
+                <tr>
+                  <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #00A859 0%, #00C853 100%); border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Đặt lại mật khẩu</h1>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px;">
+                    <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                      Xin chào,
+                    </p>
+                    <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
+                      Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Vui lòng sử dụng mã OTP bên dưới để xác thực và tiếp tục quá trình đặt lại mật khẩu.
+                    </p>
+                    
+                    <!-- OTP Box -->
+                    <div style="background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-radius: 8px; padding: 30px; text-align: center; margin: 30px 0;">
+                      <p style="margin: 0 0 15px; color: #666666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Mã xác thực của bạn</p>
+                      <div style="font-size: 36px; font-weight: 700; color: #00A859; letter-spacing: 8px; margin: 15px 0; font-family: 'Courier New', monospace;">${code}</div>
+                      <a href="${resetUrl}" target="_self" style="display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #00A859 0%, #00C853 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; margin-top: 15px; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0, 168, 89, 0.3);">
+                        Xác nhận & sao chép OTP
+                      </a>
+                    </div>
+                    
+                    <p style="margin: 30px 0 0; color: #999999; font-size: 14px; text-align: center;">
+                      ⏱️ Mã này có hiệu lực trong <strong style="color: #00A859;">${OTP_TTL_MIN} phút</strong>
+                    </p>
+                    
+                    <div style="background-color: #E8F5E9; border-left: 4px solid #00A859; padding: 15px; margin: 30px 0; border-radius: 4px;">
+                      <p style="margin: 0; color: #2E7D32; font-size: 13px; line-height: 1.6;">
+                        <strong>⚠️ Cảnh báo bảo mật:</strong> Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này và kiểm tra bảo mật tài khoản của bạn ngay lập tức.
+                      </p>
+                    </div>
+                    
+                    <p style="margin: 20px 0 0; color: #999999; font-size: 12px; line-height: 1.6;">
+                      Mã OTP sẽ tự động hết hạn sau ${OTP_TTL_MIN} phút. Vui lòng không chia sẻ mã này với bất kỳ ai.
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 30px 40px; background-color: #f8f9fa; border-radius: 0 0 12px 12px; text-align: center;">
+                    <p style="margin: 0; color: #999999; font-size: 12px;">
+                      © ${new Date().getFullYear()} Siêu thị. Tất cả quyền được bảo lưu.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>`;
     await this.mailer.sendEmail({
       to: email,
       subject: 'Xác thực đặt lại mật khẩu',

@@ -407,7 +407,6 @@ export class AuthController {
   @EmailVerified()
   async getMe(@Req() req: Request) {
     const userId = req.user?.id as string;
-    console.log('userId', userId);
     if (!userId)
       throw new HttpException('User not found', HttpStatus.UNAUTHORIZED);
     try {
