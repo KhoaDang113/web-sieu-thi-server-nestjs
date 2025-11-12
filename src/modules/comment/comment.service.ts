@@ -303,7 +303,7 @@ export class CommentService {
     ]);
 
     return {
-      replies,
+      comments: replies,
       pagination: {
         total,
         page,

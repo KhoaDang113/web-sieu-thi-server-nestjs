@@ -14,11 +14,12 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ProductService } from '../service/product.service';
 import { Public } from '../../auth/decorators/public.decorator';
-import { GetProductDetailDto } from '../dto/get-product-detail.dto';
+
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { AdminGuard } from '../../../common/guards/admin.guard';
 import { SearchProductsDto } from '../dto/search-products.dto';
+
 @Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
@@ -57,6 +58,15 @@ export class ProductController {
     return this.productService.getProductPromotionByCategorySlugOrAll(
       categorySlug,
     );
+  }
+
+  @Public()
+  @Get(':id/related')
+  async getRelatedProducts(
+    @Param('id') id: string,
+    @Query('limit') limit: number = 5,
+  ): Promise<any> {
+    return await this.productService.getRelatedProducts(id, limit);
   }
 
   @Public()

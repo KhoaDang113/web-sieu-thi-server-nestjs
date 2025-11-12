@@ -193,7 +193,7 @@ export class ProductService {
     const product = await this.productModel
       .findOne({ _id: productId, is_active: true, is_deleted: false })
       .select(
-        'name slug image_primary unit_price discount_percent final_price stock_status images quantity',
+        'name slug image_primary unit_price discount_percent final_price stock_status images quantity unit category_id brand_id',
       )
       .lean();
 
@@ -201,6 +201,42 @@ export class ProductService {
       throw new NotFoundException('Product not found');
     }
     return product;
+  }
+
+  async getRelatedProducts(
+    productId: string,
+    limit: number = 5,
+  ): Promise<Product[]> {
+    const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+    if (!objectIdRegex.test(productId)) {
+      throw new BadRequestException('Invalid product id');
+    }
+
+    // Lấy thông tin sản phẩm hiện tại để biết category_id
+    const currentProduct = await this.productModel
+      .findOne({ _id: productId, is_active: true, is_deleted: false })
+      .select('category_id')
+      .lean();
+
+    if (!currentProduct) {
+      throw new NotFoundException('Product not found');
+    }
+
+    // Lấy các sản phẩm cùng category, loại bỏ sản phẩm hiện tại
+    const relatedProducts = await this.productModel
+      .find({
+        category_id: currentProduct.category_id,
+        _id: { $ne: productId }, // Loại bỏ sản phẩm hiện tại
+        is_active: true,
+        is_deleted: false,
+      })
+      .select(
+        '_id name slug unit unit_price image_primary discount_percent final_price stock_status quantity',
+      )
+      .limit(limit)
+      .lean();
+
+    return relatedProducts;
   }
 
   async getProductPromotionByCategorySlugOrAll(
