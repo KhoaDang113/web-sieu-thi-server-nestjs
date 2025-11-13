@@ -199,32 +199,37 @@ export class InventoryService {
         'product id',
       );
 
-      const product = await this.productModel
-        .findOne({
+      const product = await this.productModel.findOneAndUpdate(
+        {
           _id: productObjectId,
           is_deleted: false,
-        })
-        .session(session || null);
+          quantity: { $gte: item.quantity },
+        },
+        {
+          $inc: { quantity: -item.quantity },
+        },
+        {
+          new: true,
+          session: session || undefined,
+        },
+      );
 
       if (!product) {
-        throw new NotFoundException(`Product ${item.product_id} not found`);
-      }
+        const productInfo = await this.productModel
+          .findById(productObjectId)
+          .session(session || null);
 
-      const quantityBefore = product.quantity || 0;
+        if (!productInfo) {
+          throw new NotFoundException(`Product ${item.product_id} not found`);
+        }
 
-      if (quantityBefore < item.quantity) {
         throw new BadRequestException(
-          `Insufficient stock for product ${product.name}. Available: ${quantityBefore}, Requested: ${item.quantity}`,
+          `Insufficient stock for product ${productInfo.name}. Available: ${productInfo.quantity || 0}, Requested: ${item.quantity}`,
         );
       }
 
-      const quantityAfter = quantityBefore - item.quantity;
-
-      await this.productModel.findByIdAndUpdate(
-        productObjectId,
-        { quantity: quantityAfter },
-        { session: session || undefined },
-      );
+      const quantityBefore = product.quantity + item.quantity;
+      const quantityAfter = product.quantity;
 
       await this.updateStockStatus(productObjectId, session);
 
@@ -276,5 +281,62 @@ export class InventoryService {
     }
 
     return product;
+  }
+
+  async returnInventoryForOrder(
+    items: Array<{ product_id: string; quantity: number }>,
+    orderId: string,
+    session?: ClientSession,
+  ): Promise<InventoryTransaction[]> {
+    const transactions: InventoryTransaction[] = [];
+
+    for (const item of items) {
+      const productObjectId = this.ensureObjectId(
+        item.product_id,
+        'product id',
+      );
+
+      const product = await this.productModel.findOneAndUpdate(
+        {
+          _id: productObjectId,
+          is_deleted: false,
+        },
+        {
+          $inc: { quantity: item.quantity },
+        },
+        {
+          new: true,
+          session: session || undefined,
+        },
+      );
+
+      if (!product) {
+        throw new NotFoundException(`Product ${item.product_id} not found`);
+      }
+
+      const quantityBefore = product.quantity - item.quantity;
+      const quantityAfter = product.quantity;
+
+      await this.updateStockStatus(productObjectId, session);
+
+      const transaction = new this.inventoryTransactionModel({
+        product_id: productObjectId,
+        type: 'import',
+        quantity: item.quantity,
+        quantity_before: quantityBefore,
+        quantity_after: quantityAfter,
+        order_id: this.ensureObjectId(orderId, 'order id'),
+        note: 'Order cancelled - inventory returned',
+      });
+
+      if (session) {
+        transaction.$session(session);
+      }
+
+      const savedTransaction = await transaction.save();
+      transactions.push(savedTransaction);
+    }
+
+    return transactions;
   }
 }

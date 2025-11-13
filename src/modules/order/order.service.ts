@@ -229,4 +229,283 @@ export class OrderService {
 
     return order;
   }
+
+  // User hủy đơn hàng (chỉ khi pending)
+  async cancelOrderByUser(
+    orderId: string,
+    userId: string,
+    cancelReason?: string,
+  ): Promise<Order> {
+    const orderObjectId = this.ensureObjectId(orderId, 'order id');
+    const userObjectId = this.ensureObjectId(userId, 'user id');
+
+    const order = await this.orderModel.findOne({
+      _id: orderObjectId,
+      user_id: userObjectId,
+      is_deleted: false,
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== 'pending') {
+      throw new BadRequestException(
+        `Cannot cancel order with status: ${order.status}`,
+      );
+    }
+
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      const items = order.items.map((item) => ({
+        product_id: item.product_id.toString(),
+        quantity: item.quantity,
+      }));
+
+      await this.inventoryService.returnInventoryForOrder(
+        items,
+        orderId,
+        session,
+      );
+
+      order.status = 'cancelled';
+      order.cancelled_at = new Date();
+      order.cancel_reason = cancelReason || 'Cancelled by user';
+
+      await order.save({ session });
+
+      await session.commitTransaction();
+
+      const result = await this.orderModel
+        .findById(orderId)
+        .populate('address_id')
+        .populate('items.product_id', 'name slug image_primary unit_price');
+
+      if (!result) {
+        throw new NotFoundException('Order not found after cancellation');
+      }
+
+      return result;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      void session.endSession();
+    }
+  }
+
+  // Staff xác nhận đơn hàng
+  async confirmOrder(orderId: string): Promise<Order> {
+    const orderObjectId = this.ensureObjectId(orderId, 'order id');
+
+    const order = await this.orderModel.findOne({
+      _id: orderObjectId,
+      is_deleted: false,
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== 'pending') {
+      throw new BadRequestException(
+        `Cannot confirm order with status: ${order.status}`,
+      );
+    }
+
+    order.status = 'confirmed';
+    await order.save();
+
+    const result = await this.orderModel
+      .findById(orderId)
+      .populate('address_id')
+      .populate('items.product_id', 'name slug image_primary unit_price');
+
+    if (!result) {
+      throw new NotFoundException('Order not found after confirmation');
+    }
+
+    return result;
+  }
+
+  // Staff cập nhật đơn hàng đang giao
+  async shipOrder(orderId: string): Promise<Order> {
+    const orderObjectId = this.ensureObjectId(orderId, 'order id');
+
+    const order = await this.orderModel.findOne({
+      _id: orderObjectId,
+      is_deleted: false,
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== 'confirmed') {
+      throw new BadRequestException(
+        `Cannot ship order with status: ${order.status}`,
+      );
+    }
+
+    order.status = 'shipped';
+    order.shipped_at = new Date();
+    await order.save();
+
+    const result = await this.orderModel
+      .findById(orderId)
+      .populate('address_id')
+      .populate('items.product_id', 'name slug image_primary unit_price');
+
+    if (!result) {
+      throw new NotFoundException('Order not found after shipping');
+    }
+
+    return result;
+  }
+
+  // Staff xác nhận giao hàng thành công
+  async deliverOrder(orderId: string): Promise<Order> {
+    const orderObjectId = this.ensureObjectId(orderId, 'order id');
+
+    const order = await this.orderModel.findOne({
+      _id: orderObjectId,
+      is_deleted: false,
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== 'shipped') {
+      throw new BadRequestException(
+        `Cannot deliver order with status: ${order.status}`,
+      );
+    }
+
+    order.status = 'delivered';
+    order.delivered_at = new Date();
+    order.payment_status = 'paid';
+    order.paid_at = new Date();
+    await order.save();
+
+    const result = await this.orderModel
+      .findById(orderId)
+      .populate('address_id')
+      .populate('items.product_id', 'name slug image_primary unit_price');
+
+    if (!result) {
+      throw new NotFoundException('Order not found after delivery');
+    }
+
+    return result;
+  }
+
+  // Staff hủy đơn hàng
+  async cancelOrderByStaff(
+    orderId: string,
+    cancelReason: string,
+  ): Promise<Order> {
+    const orderObjectId = this.ensureObjectId(orderId, 'order id');
+
+    const order = await this.orderModel.findOne({
+      _id: orderObjectId,
+      is_deleted: false,
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (['delivered', 'cancelled'].includes(order.status)) {
+      throw new BadRequestException(
+        `Cannot cancel order with status: ${order.status}`,
+      );
+    }
+
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      if (order.status !== 'cancelled') {
+        const items = order.items.map((item) => ({
+          product_id: item.product_id.toString(),
+          quantity: item.quantity,
+        }));
+
+        await this.inventoryService.returnInventoryForOrder(
+          items,
+          orderId,
+          session,
+        );
+      }
+
+      order.status = 'cancelled';
+      order.cancelled_at = new Date();
+      order.cancel_reason = cancelReason || 'Cancelled by staff';
+
+      await order.save({ session });
+
+      await session.commitTransaction();
+
+      const result = await this.orderModel
+        .findById(orderId)
+        .populate('address_id')
+        .populate('items.product_id', 'name slug image_primary unit_price');
+
+      if (!result) {
+        throw new NotFoundException('Order not found after cancellation');
+      }
+
+      return result;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      void session.endSession();
+    }
+  }
+
+  // Staff lấy tất cả đơn hàng (có phân trang)
+  async getAllOrders(
+    page = 1,
+    limit = 20,
+    status?: string,
+  ): Promise<{
+    orders: Order[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const skip = (page - 1) * limit;
+
+    const filter: { is_deleted: boolean; status?: string } = {
+      is_deleted: false,
+    };
+    if (status) {
+      filter.status = status;
+    }
+
+    const [orders, total] = await Promise.all([
+      this.orderModel
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        .find(filter)
+        .populate('user_id', 'name email phone')
+        .populate('address_id')
+        .populate('items.product_id', 'name slug image_primary unit_price')
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(limit),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      this.orderModel.countDocuments(filter),
+    ]);
+
+    return {
+      orders,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }

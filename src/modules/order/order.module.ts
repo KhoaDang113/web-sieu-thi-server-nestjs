@@ -6,6 +6,9 @@ import { Module } from '@nestjs/common';
 import { Product, ProductSchema } from '../catalog/schema/product.schema';
 import { Address, AddressSchema } from '../address/schema/address.schema';
 import { InventoryModule } from '../inventory/inventory.module';
+import { BullModule } from '@nestjs/bullmq';
+import { OrderProcessor } from './queue/order.processor';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
   imports: [
@@ -14,10 +17,14 @@ import { InventoryModule } from '../inventory/inventory.module';
       { name: Product.name, schema: ProductSchema },
       { name: Address.name, schema: AddressSchema },
     ]),
+    BullModule.registerQueue({
+      name: 'order-queue',
+    }),
     InventoryModule,
+    RealtimeModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService],
+  providers: [OrderService, OrderProcessor],
   exports: [OrderService],
 })
 export class OrderModule {}
