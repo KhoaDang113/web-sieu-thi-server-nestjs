@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import { TokenExpiredError } from 'jsonwebtoken';
 
 @Injectable()
 export class CustomJwtService {
@@ -30,8 +31,11 @@ export class CustomJwtService {
     try {
       return jwt.verify(token, this.accessTokenSecret);
     } catch (error) {
-      console.log('error', error);
-      throw new Error('Invalid access token');
+      if (error instanceof TokenExpiredError) {
+        throw new UnauthorizedException('ACCESS_TOKEN_EXPIRED');
+      }
+
+      throw new UnauthorizedException('INVALID_ACCESS_TOKEN');
     }
   }
 
@@ -39,8 +43,11 @@ export class CustomJwtService {
     try {
       return jwt.verify(token, this.refreshTokenSecret);
     } catch (error) {
-      console.log('error', error);
-      throw new Error('Invalid refresh token');
+      if (error instanceof TokenExpiredError) {
+        throw new UnauthorizedException('REFRESH_TOKEN_EXPIRED');
+      }
+
+      throw new UnauthorizedException('INVALID_REFRESH_TOKEN');
     }
   }
 }
