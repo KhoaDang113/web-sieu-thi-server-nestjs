@@ -554,7 +554,6 @@ export class AuthService {
     candidatePassword: string,
     hashedPassword: string,
   ): Promise<boolean> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return await bcrypt.compare(candidatePassword, hashedPassword);
   }
 

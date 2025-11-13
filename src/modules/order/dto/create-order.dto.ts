@@ -6,6 +6,8 @@ import {
   IsNumber,
   Min,
   IsOptional,
+  IsBoolean,
+  IsEmail,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -18,6 +20,24 @@ export class OrderItemDto {
   @IsNumber()
   @Min(1)
   quantity: number;
+}
+
+export class InvoiceInfoDto {
+  @IsNotEmpty()
+  @IsString()
+  company_name: string;
+
+  @IsNotEmpty()
+  @IsString()
+  company_address: string;
+
+  @IsNotEmpty()
+  @IsString()
+  tax_code: string;
+
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
 }
 
 export class CreateOrderDto {
@@ -40,4 +60,13 @@ export class CreateOrderDto {
   @IsNumber()
   @Min(0)
   shipping_fee?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_company_invoice?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => InvoiceInfoDto)
+  invoice_info?: InvoiceInfoDto;
 }

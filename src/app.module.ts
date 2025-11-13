@@ -17,6 +17,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { StaffModule } from './modules/staff/staff.module';
+import { RedisModule } from './shared/redis/redis.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { StaffModule } from './modules/staff/staff.module';
     RealtimeModule,
     ChatModule,
     StaffModule,
+    RedisModule,
   ],
   providers: [
     {

@@ -137,6 +137,13 @@ export class OrderService {
     if (total < 0) {
       throw new BadRequestException('Total amount cannot be negative');
     }
+    const isCompanyInvoice = !!createOrderDto.is_company_invoice;
+
+    if (isCompanyInvoice && !createOrderDto.invoice_info) {
+      throw new BadRequestException(
+        'Invoice info is required when requesting company invoice',
+      );
+    }
 
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -152,6 +159,8 @@ export class OrderService {
         total: Math.round(total),
         status: 'pending',
         payment_status: 'pending',
+        is_company_invoice: isCompanyInvoice,
+        invoice_info: isCompanyInvoice ? createOrderDto.invoice_info : null,
       });
 
       const savedOrder = await order.save({ session });

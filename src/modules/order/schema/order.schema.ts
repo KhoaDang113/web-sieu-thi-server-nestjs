@@ -69,6 +69,25 @@ export class Order {
   cancel_reason: string;
 
   @Prop({ type: Boolean, default: false })
+  is_company_invoice: boolean;
+
+  @Prop({
+    type: {
+      company_name: { type: String, trim: true },
+      company_address: { type: String, trim: true },
+      tax_code: { type: String, trim: true },
+      email: { type: String, trim: true },
+    },
+    default: null,
+  })
+  invoice_info: {
+    company_name: string;
+    company_address: string;
+    tax_code: string;
+    email: string;
+  } | null;
+
+  @Prop({ type: Boolean, default: false })
   is_deleted: boolean;
 }
 
