@@ -2,15 +2,26 @@ import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { SendEmailDto } from './dto/send-email.dto';
 import { Order, OrderItem } from 'src/modules/order/schema/order.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import {
+  Product,
+  ProductDocument,
+} from 'src/modules/catalog/schema/product.schema';
 
 @Injectable()
 export class MailerService {
-  private transporter = nodemailer.createTransport({
+  private readonly transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: false,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
+
+  constructor(
+    @InjectModel(Product.name)
+    private readonly productModel: Model<ProductDocument>,
+  ) {}
 
   async sendEmail(sendEmailDto: SendEmailDto): Promise<{ success: boolean }> {
     try {
@@ -33,13 +44,33 @@ export class MailerService {
     const to = order.invoice_info.email;
     const subject = `Hóa đơn công ty cho đơn hàng #${order._id.toString()}`;
 
+    const resolvedNames = await Promise.all(
+      (order.items || []).map(async (item: OrderItem) => {
+        const pid = item.product_id;
+        if (pid && typeof pid === 'object' && 'name' in pid) {
+          return pid.name as string;
+        }
+
+        try {
+          const prod = await this.productModel
+            .findById(pid)
+            .select('name')
+            .lean();
+          return prod?.name || String(pid);
+        } catch {
+          return String(pid);
+        }
+      }),
+    );
+
     const itemsHtml = (order.items || [])
-      .map(
-        (item: OrderItem, idx: number) => `
+      .map((item: OrderItem, idx: number) => {
+        const prodName = resolvedNames[idx] || String(item.product_id);
+        return `
           <tr>
             <td style="padding:4px 8px;border:1px solid #ddd;">${idx + 1}</td>
             <td style="padding:4px 8px;border:1px solid #ddd;">
-              ${String(item.product_id) || 'Sản phẩm'}
+              ${prodName}
             </td>
             <td style="padding:4px 8px;border:1px solid #ddd;text-align:right;">
               ${item.quantity}
@@ -48,8 +79,8 @@ export class MailerService {
               ${item.total_price.toLocaleString('vi-VN')} ₫
             </td>
           </tr>
-        `,
-      )
+        `;
+      })
       .join('');
 
     const html = `

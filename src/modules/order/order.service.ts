@@ -177,7 +177,10 @@ export class OrderService {
       const result = await this.orderModel
         .findById(orderId)
         .populate('address_id')
-        .populate('items.product_id', 'name slug image_primary unit_price');
+        .populate(
+          'items.product_id',
+          'name slug image_primary images unit_price unit',
+        );
 
       if (!result) {
         throw new NotFoundException('Order not found after creation');
@@ -205,7 +208,7 @@ export class OrderService {
       )
       .populate(
         'items.product_id',
-        'name slug image_primary unit_price final_price discount_percent stock_status',
+        'name slug image_primary images unit_price final_price discount_percent stock_status unit',
       )
       .select(
         'user_id address_id items subtotal discount shipping_fee total status payment_status created_at updated_at',
@@ -290,7 +293,10 @@ export class OrderService {
       const result = await this.orderModel
         .findById(orderId)
         .populate('address_id')
-        .populate('items.product_id', 'name slug image_primary unit_price');
+        .populate(
+          'items.product_id',
+          'name slug image_primary images unit_price unit',
+        );
 
       if (!result) {
         throw new NotFoundException('Order not found after cancellation');
@@ -461,7 +467,10 @@ export class OrderService {
       const result = await this.orderModel
         .findById(orderId)
         .populate('address_id')
-        .populate('items.product_id', 'name slug image_primary unit_price');
+        .populate(
+          'items.product_id',
+          'name slug image_primary images unit_price unit',
+        );
 
       if (!result) {
         throw new NotFoundException('Order not found after cancellation');
@@ -502,7 +511,10 @@ export class OrderService {
         .find(filter)
         .populate('user_id', 'name email phone')
         .populate('address_id')
-        .populate('items.product_id', 'name slug image_primary unit_price')
+        .populate(
+          'items.product_id',
+          'name slug image_primary images unit_price unit',
+        )
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit),
