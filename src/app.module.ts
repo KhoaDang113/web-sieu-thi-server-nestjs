@@ -18,7 +18,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { RedisModule } from './shared/redis/redis.module';
-
+import { MailerModule } from './shared/mailer/mailer.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -74,6 +74,7 @@ import { RedisModule } from './shared/redis/redis.module';
     ChatModule,
     StaffModule,
     RedisModule,
+    MailerModule,
   ],
   providers: [
     {

@@ -15,7 +15,7 @@ import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { type QueryDrResponseFromVNPay } from 'vnpay/types-only';
 
-@Controller('payment')
+@Controller('payments')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -46,12 +46,10 @@ export class PaymentController {
       throw new NotFoundException('Transaction not found');
     }
 
-    // Redirect về frontend với kết quả
     if (result.redirectUrl) {
       return res.redirect(result.redirectUrl);
     }
 
-    // Fallback: trả về JSON nếu không có redirect URL
     return res.json({
       success: result.payment.status === 'completed',
       payment: result.payment,

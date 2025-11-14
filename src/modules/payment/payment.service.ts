@@ -1,17 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   PaymentTransaction,
   PaymentTransactionDocument,
 } from './schema/payment-transaction.schema';
-import { Model, ClientSession } from 'mongoose';
+import { Model, ClientSession, Connection, Types } from 'mongoose';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
+
 import { VNPay } from 'vnpay/vnpay';
 import { HashAlgorithm, ProductCode, VnpLocale } from 'vnpay/enums';
 import { dateFormat, ignoreLogger } from 'vnpay/utils';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { Types } from 'mongoose';
-
+import { MailerService } from 'src/shared/mailer/mailer.service';
 import type { QueryDrResponseFromVNPay } from 'vnpay/types-only';
 import { Order, OrderDocument } from '../order/schema/order.schema';
 
@@ -23,40 +26,59 @@ export class PaymentService {
     @InjectModel(Order.name)
     private orderModel: Model<OrderDocument>,
     @InjectConnection() private connection: Connection,
+    private mailerService: MailerService,
   ) {}
 
   private vnpay = new VNPay({
-    // Thông tin cấu hình bắt buộc
     tmnCode: process.env.VNPAY_TMN_CODE as string,
     secureSecret: process.env.VNPAY_SECURE_SECRET as string,
     vnpayHost: process.env.VNPAY_HOST as string,
-
-    // Cấu hình tùy chọn
-    testMode: true, // Chế độ test
-    hashAlgorithm: HashAlgorithm.SHA512, // Thuật toán mã hóa
-    enableLog: true, // Bật/tắt ghi log
-    loggerFn: ignoreLogger, // Hàm xử lý log tùy chỉnh
+    testMode: true,
+    hashAlgorithm: HashAlgorithm.SHA512,
+    enableLog: true,
+    loggerFn: ignoreLogger,
   });
 
   async createPaymentTransaction(
     createPaymentDto: CreatePaymentDto,
     userId: string,
   ): Promise<string> {
+    const order = await this.orderModel.findOne({
+      _id: createPaymentDto.orderId,
+      user_id: new Types.ObjectId(userId),
+      is_deleted: false,
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.payment_status === 'paid') {
+      throw new BadRequestException('Order has already been paid');
+    }
+
+    if (order.total <= 0) {
+      throw new BadRequestException('Invalid order amount');
+    }
+
+    const amount = order.total;
+
     const newPaymentTransaction = new this.paymentTransactionModel({
       ...createPaymentDto,
       orderId: new Types.ObjectId(createPaymentDto.orderId),
       user_id: new Types.ObjectId(userId),
       status: 'pending',
+      amount: amount,
     });
     await newPaymentTransaction.save();
 
     const vnpayResponse = this.vnpay.buildPaymentUrl({
-      vnp_Amount: createPaymentDto.amount,
+      vnp_Amount: amount,
       vnp_IpAddr: '127.0.0.1',
       vnp_TxnRef: createPaymentDto.orderId,
       vnp_OrderInfo: `Thanh toán đơn hàng ${createPaymentDto.orderId}`,
       vnp_OrderType: ProductCode.Other,
-      vnp_ReturnUrl: 'http://localhost:3000/api/payment/get-info',
+      vnp_ReturnUrl: 'http://localhost:3000/api/payments/get-info',
       vnp_Locale: VnpLocale.VN, // Ngôn ngữ hiển thị
       vnp_CreateDate: dateFormat(new Date(), 'yyyyMMddHHmmss'), // Thời gian tạo giao dịch
       vnp_ExpireDate: dateFormat(
@@ -107,10 +129,16 @@ export class PaymentService {
           order.paid_at = new Date();
           await order.save({ session });
 
+          const orderFind = await this.orderModel.findById(vnp_TxnRef);
+
+          if (orderFind) {
+            await this.mailerService.sendCompanyInvoice(orderFind);
+          }
+
           return {
             isValid: true,
             payment,
-            redirectUrl: `${process.env.FRONTEND_URL}/payment/success?orderId=${vnp_TxnRef}`,
+            redirectUrl: `${process.env.FRONTEND_URL}/payments/success?orderId=${vnp_TxnRef}`,
           };
         } else {
           payment.status = 'failed';
@@ -119,7 +147,7 @@ export class PaymentService {
           return {
             isValid: true,
             payment,
-            redirectUrl: `${process.env.FRONTEND_URL}/payment/failed?orderId=${vnp_TxnRef}`,
+            redirectUrl: `${process.env.FRONTEND_URL}/payments/failed?orderId=${vnp_TxnRef}`,
           };
         }
       });

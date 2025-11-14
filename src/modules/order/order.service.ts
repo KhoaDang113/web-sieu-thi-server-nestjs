@@ -165,7 +165,7 @@ export class OrderService {
 
       const savedOrder = await order.save({ session });
 
-      const orderId = (savedOrder._id as Types.ObjectId).toString();
+      const orderId = savedOrder._id.toString();
       await this.inventoryService.exportInventoryForOrder(
         createOrderDto.items,
         orderId,
