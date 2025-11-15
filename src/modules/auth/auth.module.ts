@@ -11,6 +11,7 @@ import { MailerModule } from '../../shared/mailer/mailer.module';
 import { RefreshTokenModule } from '../refresh-tokens/refresh-token.module';
 import { VerificationModule } from '../verification/verification.module';
 import { SmsModule } from '../../shared/sms/sms.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SmsModule } from '../../shared/sms/sms.module';
     RefreshTokenModule,
     VerificationModule,
     SmsModule,
+    ChatModule,
   ],
   controllers: [AuthController],
   providers: [

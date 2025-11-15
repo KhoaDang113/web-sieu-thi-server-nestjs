@@ -44,6 +44,8 @@ export class StaffController {
 
     if (body.status === 'ONLINE') {
       await this.assignment.drainQueue();
+    } else if (body.status === 'OFFLINE') {
+      await this.assignment.requeueAllByAgent(userId);
     }
 
     return { ok: true };
@@ -57,8 +59,8 @@ export class StaffController {
     @Query('skip') skip?: string,
   ) {
     const staffId = String(req.user?.id);
-    const limitNum = limit ? parseInt(limit, 10) : 20;
-    const skipNum = skip ? parseInt(skip, 10) : 0;
+    const limitNum = limit ? Number.parseInt(limit, 10) : 20;
+    const skipNum = skip ? Number.parseInt(skip, 10) : 0;
 
     return this.chatService.getStaffConversations(
       staffId,

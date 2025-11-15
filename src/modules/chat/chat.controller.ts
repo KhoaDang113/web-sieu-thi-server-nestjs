@@ -26,7 +26,7 @@ import type { Request } from 'express';
 export class ChatController {
   constructor(
     @InjectModel(Conversation.name)
-    private convModel: Model<ConversationDocument>,
+    private readonly convModel: Model<ConversationDocument>,
     private readonly assignment: AssignmentService,
     private readonly chatService: ChatService,
     private readonly autoCloseService: ChatAutoCloseService,
@@ -85,8 +85,8 @@ export class ChatController {
       return { conversations: [], total: 0 };
     }
 
-    const limitNum = limit ? parseInt(limit, 10) : 10;
-    const skipNum = skip ? parseInt(skip, 10) : 0;
+    const limitNum = limit ? Number.parseInt(limit, 10) : 10;
+    const skipNum = skip ? Number.parseInt(skip, 10) : 0;
 
     return this.chatService.getUserConversations(userId, limitNum, skipNum);
   }
@@ -117,7 +117,7 @@ export class ChatController {
 
       await this.chatService.sendMessage(
         conversationId,
-        'Cuộc trò chuyện đã được kết nối với nhân viên mới.',
+        'Cuộc trò chuyện đang được kết nối với nhân viên.',
         'SYSTEM',
       );
     }
@@ -154,8 +154,8 @@ export class ChatController {
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
   ): Promise<{ messages: any[] }> {
-    const limitNum = limit ? parseInt(limit, 10) : 50;
-    const skipNum = skip ? parseInt(skip, 10) : 0;
+    const limitNum = limit ? Number.parseInt(limit, 10) : 50;
+    const skipNum = skip ? Number.parseInt(skip, 10) : 0;
     const messages = await this.chatService.getMessages(
       conversationId,
       limitNum,

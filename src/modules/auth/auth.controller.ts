@@ -24,10 +24,13 @@ import { VerifyLoginSmsDto } from './dto/verify-login-sms.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordWithTokenDto } from './dto/reset-password-with-token.dto';
 import { ChangePasswordDto } from './dto/change-Password.dto';
-
+import { AssignmentService } from '../chat/assignment.service';
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly assignment: AssignmentService,
+  ) {}
 
   @Public()
   @Post('register-email')
@@ -203,7 +206,6 @@ export class AuthController {
     }
   }
 
-  @Public()
   @Post('logout')
   async logout(@Req() req: Request, @Res() res: Response) {
     const refreshToken: string = req.cookies?.refreshToken as string;
@@ -214,7 +216,11 @@ export class AuthController {
       );
     }
     try {
+      const userId = String(req?.user?.id);
       await this.authService.logout(refreshToken);
+      if (userId) {
+        await this.assignment.closeUserConversation(userId);
+      }
       res.clearCookie('refreshToken');
       res.clearCookie('accessToken');
       return res.status(HttpStatus.OK).json({

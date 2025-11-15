@@ -12,20 +12,23 @@ import { Message, MessageDocument } from './schema/message.schema';
 export class ChatGateway {
   @WebSocketServer() server: Server;
   constructor(
-    @InjectModel(Message.name) private msgModel: Model<MessageDocument>,
+    @InjectModel(Message.name)
+    private readonly msgModel: Model<MessageDocument>,
   ) {}
 
   @SubscribeMessage('join_conversation')
   async join(socket: Socket, payload: { conversation_id: string }) {
     void socket.join(payload.conversation_id);
-
+    console.log(
+      `Socket ${socket.id} joined conversation ${payload.conversation_id}`,
+    );
     const messages = await this.msgModel
       .find({ conversation_id: new Types.ObjectId(payload.conversation_id) })
       .sort({ createdAt: -1 })
       .limit(50)
       .lean();
 
-    const ordered = messages.reverse();
+    const ordered = messages.toReversed();
 
     socket.emit('history.messages', ordered);
   }

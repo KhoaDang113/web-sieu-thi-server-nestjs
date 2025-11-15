@@ -14,7 +14,7 @@ export class ChatAutoCloseService {
 
   constructor(
     @InjectModel(Conversation.name)
-    private convModel: Model<ConversationDocument>,
+    private readonly convModel: Model<ConversationDocument>,
     @Inject('REDIS') private readonly redis: Redis,
   ) {}
 

@@ -16,8 +16,8 @@ export class AssignmentService {
   constructor(
     @Inject('REDIS') private readonly redis: Redis,
     @InjectModel(Conversation.name)
-    private convModel: Model<ConversationDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly convModel: Model<ConversationDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly gateway: ChatGateway,
     private readonly chatService: ChatService,
   ) {}
@@ -35,8 +35,8 @@ export class AssignmentService {
         `agent:${id}:current`,
         `agent:${id}:max`,
       );
-      const current = parseInt(cur || '0', 10);
-      const m = parseInt(max || '3', 10);
+      const current = Number.parseInt(cur || '0', 10);
+      const m = Number.parseInt(max || '3', 10);
       if (status === 'ONLINE' && current < m)
         list.push({ id, current, max: m });
     }
@@ -59,10 +59,19 @@ export class AssignmentService {
 
       const agent = await this.pickAgent();
       if (!agent) {
-        await this.redis.rpush('queue:waiting', convId);
-        this.gateway.emitToConversation(convId, 'queue.waiting', {
-          position: await this.redis.llen('queue:waiting'),
-        });
+        const key = `conv:${convId}:queued`;
+
+        const added = await this.redis.setnx(key, '1');
+
+        if (added === 1) {
+          await this.redis.expire(key, 3600);
+
+          await this.redis.rpush('queue:waiting', convId);
+
+          this.gateway.emitToConversation(convId, 'queue.waiting', {
+            position: await this.redis.llen('queue:waiting'),
+          });
+        }
         return conv;
       }
 
@@ -118,9 +127,38 @@ export class AssignmentService {
     await this.drainQueue();
   }
 
+  async closeUserConversation(userId: string) {
+    const conv = await this.convModel.findOne({
+      user_id: new Types.ObjectId(userId),
+      state: { $in: ['OPEN', 'PENDING'] },
+    });
+
+    if (!conv) return;
+
+    await this.closeConversation(conv._id.toString());
+  }
+
+  async requeueAllByAgent(agentId: string) {
+    const convs = await this.convModel.find({
+      current_agent_id: new Types.ObjectId(agentId),
+      state: 'OPEN',
+    });
+
+    for (const conv of convs) {
+      conv.current_agent_id = undefined;
+      conv.state = 'PENDING';
+      await conv.save();
+
+      await this.decrementAgentCount(agentId);
+      await this.redis.rpush('queue:waiting', conv._id.toString());
+    }
+
+    await this.drainQueue();
+  }
+
   async decrementAgentCount(agentId: string) {
     const current = await this.redis.get(`agent:${agentId}:current`);
-    if (current && parseInt(current, 10) > 0) {
+    if (current && Number.parseInt(current, 10) > 0) {
       await this.redis.decr(`agent:${agentId}:current`);
     }
   }

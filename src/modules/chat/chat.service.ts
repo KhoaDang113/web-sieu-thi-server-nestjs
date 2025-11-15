@@ -12,15 +12,16 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 @Injectable()
 export class ChatService {
   constructor(
-    @InjectModel(Message.name) private msgModel: Model<MessageDocument>,
+    @InjectModel(Message.name)
+    private readonly msgModel: Model<MessageDocument>,
     @InjectModel(Conversation.name)
-    private convModel: Model<ConversationDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly convModel: Model<ConversationDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly gateway: ChatGateway,
   ) {}
 
   async sendWelcomeMessage(conversationId: string) {
-    const welcomeText = 'Xin chào! FPT Shop rất vui được hỗ trợ bạn.';
+    const welcomeText = 'Xin chào! web siêu thị rất vui được hỗ trợ bạn.';
 
     const message = await this.msgModel.create({
       conversation_id: new Types.ObjectId(conversationId),
@@ -46,7 +47,7 @@ export class ChatService {
     }
 
     const agentName = agent.name || 'Nhân viên';
-    const introductionText = `Cảm ơn anh/chị đã liên hệ FPTShop, Em là ${agentName} xin phép được hỗ trợ. Dạ để tiện trao đổi em xin lại tên của mình nhé`;
+    const introductionText = `Cảm ơn anh/chị đã liên hệ Bách Hóa Không Xanh, Em là ${agentName} xin phép được hỗ trợ. Dạ để tiện trao đổi em xin lại tên của mình nhé`;
     const followUpText = 'Dạ mình cần hỗ trợ gì ạ?';
 
     const introMessage = await this.msgModel.create({
@@ -127,7 +128,7 @@ export class ChatService {
       .skip(skip)
       .lean();
 
-    return messages.reverse() as MessageDocument[];
+    return messages.toReversed() as MessageDocument[];
   }
 
   async getStaffConversations(
@@ -263,7 +264,6 @@ export class ChatService {
     const conversation = await this.convModel
       .findOne({
         user_id: new Types.ObjectId(userId),
-        state: { $in: ['OPEN', 'PENDING'] },
       })
       .populate('current_agent_id', 'name avatar')
       .sort({ updatedAt: -1 })
@@ -286,15 +286,10 @@ export class ChatService {
     };
   }
 
-  /**
-   * Lấy hoặc tạo conversation cho user
-   */
   async getOrCreateConversation(userId?: string): Promise<any> {
-    // Nếu user đã đăng nhập, tìm conversation đang mở
     if (userId) {
       const existing = await this.convModel.findOne({
         user_id: new Types.ObjectId(userId),
-        state: { $in: ['OPEN', 'PENDING'] },
       });
 
       if (existing) {
@@ -305,14 +300,9 @@ export class ChatService {
         };
       }
     }
-
-    // Không tìm thấy hoặc user chưa đăng nhập → tạo mới
     return null;
   }
 
-  /**
-   * Kiểm tra và reopen conversation nếu user quay lại sau khi close
-   */
   async checkAndReopenConversation(conversationId: string): Promise<{
     should_reopen: boolean;
     conversation?: any;
@@ -324,7 +314,6 @@ export class ChatService {
       return { should_reopen: false };
     }
 
-    // Nếu conversation đã CLOSED
     if (conversation.state === 'CLOSED') {
       // Set lại state = PENDING để assign staff mới
       conversation.state = 'PENDING';
@@ -368,9 +357,6 @@ export class ChatService {
     return { should_reopen: false };
   }
 
-  /**
-   * Lấy lịch sử conversations của user
-   */
   async getUserConversations(
     userId: string,
     limit = 10,
