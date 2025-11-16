@@ -8,6 +8,10 @@ import {
 } from './schema/conversation.schema';
 import { ChatGateway } from './chat.getway';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import {
+  BaseConversation,
+  EnrichedConversation,
+} from 'src/types/conversationStaff';
 
 @Injectable()
 export class ChatService {
@@ -88,6 +92,13 @@ export class ChatService {
     text: string,
     senderType: 'USER' | 'STAFF' | 'SYSTEM',
     senderId?: string,
+    attachments?: Array<{
+      url: string;
+      type: 'image' | 'file';
+      name?: string;
+      size?: number;
+      mimetype?: string;
+    }>,
   ) {
     const conversation = await this.convModel.findById(conversationId);
     if (!conversation) {
@@ -99,16 +110,19 @@ export class ChatService {
       sender_type: senderType,
       sender_id: senderId ? new Types.ObjectId(senderId) : undefined,
       text,
+      attachments: attachments || [],
       is_read: false,
     });
 
     conversation.last_message_at = new Date();
+    conversation.last_message = text || '[File đính kèm]';
+    conversation.sender_type = senderType;
     await conversation.save();
-
+    const populated = await message.populate('sender_id', 'name avatar');
     this.gateway.emitToConversation(
       conversationId,
       'message.new',
-      message.toObject(),
+      populated.toObject(),
     );
 
     return message;
@@ -134,6 +148,7 @@ export class ChatService {
   async getStaffConversations(
     staffId: string,
     state?: string,
+    search?: string,
     limit = 20,
     skip = 0,
   ): Promise<{
@@ -152,21 +167,15 @@ export class ChatService {
 
     const conversations = await this.convModel
       .find(filter)
-      .populate('user_id', 'name avatar phone')
+      .populate('user_id', 'name avatar phone email')
       .populate('current_agent_id', 'name')
       .sort({ last_message_at: -1, updatedAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean();
+      .lean<BaseConversation[]>();
 
-    const conversationsWithLastMessage = await Promise.all(
-      conversations.map(async (conv) => {
+    let enriched: EnrichedConversation[] = await Promise.all(
+      conversations.map(async (conv): Promise<EnrichedConversation> => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const convId = (conv as any)._id as Types.ObjectId;
-        const lastMessage = await this.msgModel
-          .findOne({ conversation_id: convId })
-          .sort({ createdAt: -1 })
-          .lean();
 
         const unreadCount = await this.msgModel.countDocuments({
           conversation_id: convId,
@@ -176,16 +185,40 @@ export class ChatService {
 
         return {
           ...conv,
-          last_message: lastMessage,
+          last_message: conv.last_message || '',
+          sender_type: conv.sender_type || '',
           unread_count: unreadCount,
         };
       }),
     );
 
-    const total = await this.convModel.countDocuments(filter);
+    if (search && search.trim().length > 0) {
+      const keyword = search.toLowerCase();
+
+      enriched = enriched.filter((conv) => {
+        const user = conv.user_id;
+
+        const name = user?.name?.toLowerCase?.() ?? '';
+        const phone = user?.phone?.toLowerCase?.() ?? '';
+        const email = user?.email?.toLowerCase?.() ?? '';
+        const lastMsg = conv?.last_message?.toLowerCase?.() ?? '';
+
+        return (
+          name.includes(keyword) ||
+          phone.includes(keyword) ||
+          email.includes(keyword) ||
+          lastMsg.includes(keyword) ||
+          String(conv._id).toLowerCase().includes(keyword)
+        );
+      });
+    }
+
+    const total = enriched.length;
+
+    const result = enriched.slice(skip, skip + limit);
 
     return {
-      conversations: conversationsWithLastMessage,
+      conversations: result,
       total,
       page: Math.floor(skip / limit) + 1,
       pages: Math.ceil(total / limit),

@@ -7,8 +7,16 @@ import { Server, Socket } from 'socket.io';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Message, MessageDocument } from './schema/message.schema';
-
-@WebSocketGateway({ cors: true })
+@WebSocketGateway({
+  cors: {
+    origin: process.env.CORS_ORIGIN?.split(',') || [
+      'http://localhost:5173',
+      'http://localhost:5174',
+    ],
+    credentials: true,
+  },
+  namespace: '/',
+})
 export class ChatGateway {
   @WebSocketServer() server: Server;
   constructor(
@@ -24,10 +32,10 @@ export class ChatGateway {
     );
     const messages = await this.msgModel
       .find({ conversation_id: new Types.ObjectId(payload.conversation_id) })
+      .populate('sender_id', 'name avatar')
       .sort({ createdAt: -1 })
       .limit(50)
       .lean();
-
     const ordered = messages.toReversed();
 
     socket.emit('history.messages', ordered);
@@ -44,6 +52,10 @@ export class ChatGateway {
     this.server.to(`staff:${agentId}`).emit('new_conversation', {
       conversation_id: conversationId,
     });
+  }
+
+  emitToStaff(staffId: string, event: string, data: any) {
+    this.server.to(`staff:${staffId}`).emit(event, data);
   }
 
   emitToConversation(conversationId: string, event: string, data: any) {

@@ -16,6 +16,10 @@ export class Conversation {
 
   @Prop({ default: 'default' }) queue: string; // 1 hàng chờ chung
 
+  @Prop({ default: '' }) last_message?: string;
+
+  @Prop() sender_type?: string;
+
   @Prop() last_message_at?: Date;
 }
 

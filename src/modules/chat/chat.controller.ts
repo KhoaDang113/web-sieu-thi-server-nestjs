@@ -7,7 +7,10 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -20,6 +23,7 @@ import { ChatAutoCloseService } from './chat-auto-close.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { StaffGuard } from '../../common/guards/staff.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
 import type { Request } from 'express';
 
 @Controller('conversations')
@@ -30,6 +34,7 @@ export class ChatController {
     private readonly assignment: AssignmentService,
     private readonly chatService: ChatService,
     private readonly autoCloseService: ChatAutoCloseService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   @Post()
@@ -98,9 +103,11 @@ export class ChatController {
   }
 
   @Post(':id/messages')
+  @UseInterceptors(FilesInterceptor('files', 5))
   async sendMessage(
     @Param('id') conversationId: string,
     @Body() dto: CreateMessageDto,
+    @UploadedFiles() files: Express.Multer.File[],
     @Req() req: Request,
   ) {
     const userId = req.user?.id as string | undefined;
@@ -122,28 +129,102 @@ export class ChatController {
       );
     }
 
+    // Upload files if any
+    let attachments: Array<{
+      url: string;
+      type: 'image' | 'file';
+      name?: string;
+      size?: number;
+      mimetype?: string;
+    }> = [];
+
+    if (files && files.length > 0) {
+      const uploadPromises = files.map(async (file) => {
+        const url = await this.cloudinaryService.uploadFile(file, 'chat');
+
+        let decodedFilename = file.originalname;
+        try {
+          decodedFilename = Buffer.from(file.originalname, 'latin1').toString(
+            'utf8',
+          );
+        } catch {
+          decodedFilename = file.originalname;
+        }
+
+        return {
+          url,
+          type: file.mimetype.startsWith('image/')
+            ? ('image' as const)
+            : ('file' as const),
+          name: decodedFilename,
+          size: file.size,
+          mimetype: file.mimetype,
+        };
+      });
+      attachments = await Promise.all(uploadPromises);
+    }
+
     const message = await this.chatService.sendMessage(
       conversationId,
-      dto.text,
+      dto.text || '',
       'USER',
       userId,
+      attachments,
     );
     return message;
   }
 
   @Post(':id/messages/staff')
   @UseGuards(StaffGuard)
+  @UseInterceptors(FilesInterceptor('files', 5))
   async sendStaffMessage(
     @Param('id') conversationId: string,
     @Body() dto: CreateMessageDto,
+    @UploadedFiles() files: Express.Multer.File[],
     @Req() req: Request,
   ) {
     const staffId = req.user?.id as string;
+
+    // Upload files if any
+    let attachments: Array<{
+      url: string;
+      type: 'image' | 'file';
+      name?: string;
+      size?: number;
+      mimetype?: string;
+    }> = [];
+
+    if (files && files.length > 0) {
+      const uploadPromises = files.map(async (file) => {
+        const url = await this.cloudinaryService.uploadFile(file, 'chat');
+        let decodedFilename = file.originalname;
+        try {
+          decodedFilename = Buffer.from(file.originalname, 'latin1').toString(
+            'utf8',
+          );
+        } catch {
+          decodedFilename = file.originalname;
+        }
+
+        return {
+          url,
+          type: file.mimetype.startsWith('image/')
+            ? ('image' as const)
+            : ('file' as const),
+          name: decodedFilename,
+          size: file.size,
+          mimetype: file.mimetype,
+        };
+      });
+      attachments = await Promise.all(uploadPromises);
+    }
+
     const message = await this.chatService.sendMessage(
       conversationId,
-      dto.text,
+      dto.text || '',
       'STAFF',
       staffId,
+      attachments,
     );
     return message;
   }

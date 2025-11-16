@@ -64,5 +64,11 @@ export class CreateProductDto {
   stock_status?: 'in_stock' | 'out_of_stock' | 'preorder';
 
   @IsOptional()
+  @Transform(({ value }) => (value ? Number(value) : 0))
+  @IsNumber()
+  @Min(0)
+  quantity?: number;
+
+  @IsOptional()
   is_active?: boolean;
 }

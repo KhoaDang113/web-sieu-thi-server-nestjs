@@ -125,6 +125,7 @@ export class ProductService {
           discount_percent: 1,
           final_price: 1,
           stock_status: 1,
+          quantity: 1,
           is_active: 1,
           category_id: 1,
           score: { $meta: 'textScore' },
@@ -212,7 +213,6 @@ export class ProductService {
       throw new BadRequestException('Invalid product id');
     }
 
-    // Lấy thông tin sản phẩm hiện tại để biết category_id
     const currentProduct = await this.productModel
       .findOne({ _id: productId, is_active: true, is_deleted: false })
       .select('category_id')
@@ -222,11 +222,10 @@ export class ProductService {
       throw new NotFoundException('Product not found');
     }
 
-    // Lấy các sản phẩm cùng category, loại bỏ sản phẩm hiện tại
     const relatedProducts = await this.productModel
       .find({
         category_id: currentProduct.category_id,
-        _id: { $ne: productId }, // Loại bỏ sản phẩm hiện tại
+        _id: { $ne: productId },
         is_active: true,
         is_deleted: false,
       })
@@ -333,6 +332,8 @@ export class ProductService {
       }
     }
 
+    const quantity = dto.quantity !== undefined ? dto.quantity : 0;
+
     const product = new this.productModel({
       ...dto,
       category_id: new Types.ObjectId(dto.category_id),
@@ -343,6 +344,7 @@ export class ProductService {
       is_active: dto.is_active !== undefined ? dto.is_active : true,
       image_primary: imagePrimaryUrl,
       images: imagesUrls,
+      quantity: quantity,
     });
 
     try {

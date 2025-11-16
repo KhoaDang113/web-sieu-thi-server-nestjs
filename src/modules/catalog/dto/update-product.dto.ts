@@ -64,6 +64,11 @@ export class UpdateProductDto {
   stock_status?: 'in_stock' | 'out_of_stock' | 'preorder';
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value as boolean;
+  })
   @IsBoolean()
   is_active?: boolean;
 }

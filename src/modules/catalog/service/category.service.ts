@@ -25,7 +25,7 @@ export class CategoryService {
         is_active: true,
         is_deleted: false,
       })
-      .select('name slug description image')
+      .select('_id name slug description image is_active is_deleted')
       .lean();
 
     const categoryWithsubCategories = await Promise.all(
@@ -36,7 +36,7 @@ export class CategoryService {
             is_active: true,
             is_deleted: false,
           })
-          .select('name slug description image')
+          .select('_id name slug description image is_active is_deleted')
           .lean();
 
         return { ...parent, subCategories: subCategories };

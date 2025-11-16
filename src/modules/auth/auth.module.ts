@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -20,7 +20,7 @@ import { ChatModule } from '../chat/chat.module';
     RefreshTokenModule,
     VerificationModule,
     SmsModule,
-    ChatModule,
+    forwardRef(() => ChatModule),
   ],
   controllers: [AuthController],
   providers: [

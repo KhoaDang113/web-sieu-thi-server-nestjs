@@ -55,6 +55,7 @@ export class StaffController {
   async getConversations(
     @Req() req: Request,
     @Query('state') state?: string,
+    @Query('search') search?: string,
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
   ) {
@@ -65,6 +66,7 @@ export class StaffController {
     return this.chatService.getStaffConversations(
       staffId,
       state,
+      search,
       limitNum,
       skipNum,
     );
@@ -75,6 +77,11 @@ export class StaffController {
     @Param('id') conversationId: string,
   ): Promise<any> {
     return this.chatService.getConversationDetail(conversationId);
+  }
+
+  @Get('conversations/:id/messages')
+  async getMessages(@Param('id') conversationId: string) {
+    return await this.chatService.getMessages(conversationId);
   }
 
   @Patch('conversations/:id/read')

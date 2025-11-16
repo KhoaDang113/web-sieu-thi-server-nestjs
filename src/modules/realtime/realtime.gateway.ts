@@ -72,6 +72,10 @@ export class RealtimeGateway
       this.logger.log(
         `Socket ${client.id} authenticated and joined user:${userId}`,
       );
+      if (payload.role === 'staff' || payload.type === 'staff') {
+        await client.join(`staff:${userId}`);
+        this.logger.log(`Socket ${client.id} also joined staff:${userId}`);
+      }
     } catch (error) {
       this.logger.error(
         `Socket ${client.id} authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,

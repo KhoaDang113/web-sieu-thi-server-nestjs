@@ -78,9 +78,14 @@ export class AssignmentService {
       await this.redis.incr(`agent:${agent.id}:current`);
       conv.current_agent_id = new Types.ObjectId(agent.id);
       conv.state = 'OPEN';
+      conv.last_message_at = new Date();
       await conv.save();
 
       await this.chatService.sendAgentIntroductionMessage(convId, agent.id);
+
+      this.gateway.emitToStaff(agent.id, 'assignment.new_conversation', {
+        conversation_id: convId,
+      });
 
       this.gateway.notifyAssigned(convId, agent.id);
       return conv;
@@ -103,10 +108,13 @@ export class AssignmentService {
       await this.redis.incr(`agent:${agent.id}:current`);
       conv.current_agent_id = new Types.ObjectId(agent.id);
       conv.state = 'OPEN';
+      conv.last_message_at = new Date();
       await conv.save();
 
       await this.chatService.sendAgentIntroductionMessage(convId, agent.id);
-
+      this.gateway.emitToStaff(agent.id, 'assignment.new_conversation', {
+        conversation_id: convId,
+      });
       this.gateway.notifyAssigned(convId, agent.id);
     }
   }
@@ -115,14 +123,25 @@ export class AssignmentService {
     const conv = await this.convModel.findById(convId);
     if (!conv) return;
 
+    const agentId = conv.current_agent_id
+      ? conv.current_agent_id.toString()
+      : null;
+
     if (conv.current_agent_id && conv.state === 'OPEN') {
       await this.redis.decr(
         `agent:${conv.current_agent_id.toString()}:current`,
       );
+      conv.current_agent_id = undefined;
     }
 
     conv.state = 'CLOSED';
     await conv.save();
+
+    if (agentId) {
+      this.gateway.emitToStaff(agentId, 'conversation.closed', {
+        conversation_id: convId,
+      });
+    }
 
     await this.drainQueue();
   }
