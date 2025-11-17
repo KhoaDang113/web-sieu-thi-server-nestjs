@@ -142,22 +142,25 @@ export class OrderController {
   // Staff xác nhận đơn hàng
   @Patch('admin/:id/confirm')
   @UseGuards(StaffGuard)
-  async confirmOrder(@Param('id') id: string) {
-    return await this.orderService.confirmOrder(id);
+  async confirmOrder(@Param('id') id: string, @Req() req: Request) {
+    const staffId = req.user?.id as string;
+    return await this.orderService.confirmOrder(id, staffId);
   }
 
   // Staff cập nhật đang giao hàng
   @Patch('admin/:id/ship')
   @UseGuards(StaffGuard)
-  async shipOrder(@Param('id') id: string) {
-    return await this.orderService.shipOrder(id);
+  async shipOrder(@Param('id') id: string, @Req() req: Request) {
+    const staffId = req.user?.id as string;
+    return await this.orderService.shipOrder(id, staffId);
   }
 
   // Staff xác nhận giao hàng thành công
   @Patch('admin/:id/deliver')
   @UseGuards(StaffGuard)
-  async deliverOrder(@Param('id') id: string) {
-    return await this.orderService.deliverOrder(id);
+  async deliverOrder(@Param('id') id: string, @Req() req: Request) {
+    const staffId = req.user?.id as string;
+    return await this.orderService.deliverOrder(id, staffId);
   }
 
   // Staff hủy đơn hàng
@@ -166,6 +169,7 @@ export class OrderController {
   async cancelOrderByStaff(
     @Param('id') id: string,
     @Body() body: { cancel_reason: string },
+    @Req() req: Request,
   ) {
     if (!body) {
       throw new UnauthorizedException('Body is required');
@@ -173,6 +177,11 @@ export class OrderController {
     if (!body.cancel_reason) {
       throw new UnauthorizedException('Cancel reason is required');
     }
-    return await this.orderService.cancelOrderByStaff(id, body.cancel_reason);
+    const staffId = req.user?.id as string;
+    return await this.orderService.cancelOrderByStaff(
+      id,
+      body.cancel_reason,
+      staffId,
+    );
   }
 }

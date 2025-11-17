@@ -19,6 +19,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { MailerModule } from './shared/mailer/mailer.module';
+import { NotificationModule } from './modules/notification/notification.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -67,6 +68,7 @@ import { MailerModule } from './shared/mailer/mailer.module';
     UserModule,
     AddressModule,
     CommentModule,
+    NotificationModule,
     InventoryModule,
     OrderModule,
     PaymentModule,

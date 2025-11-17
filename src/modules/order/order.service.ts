@@ -3,26 +3,27 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Model, Types, Connection } from 'mongoose';
 import { Order, OrderDocument } from './schema/order.schema';
 import { Product, ProductDocument } from '../catalog/schema/product.schema';
 import { Address, AddressDocument } from '../address/schema/address.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { InventoryService } from '../inventory/inventory.service';
+import { OrderRealtimeService } from '../realtime/order-realtime.service';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectModel(Order.name)
-    private orderModel: Model<OrderDocument>,
+    private readonly orderModel: Model<OrderDocument>,
     @InjectModel(Product.name)
-    private productModel: Model<ProductDocument>,
+    private readonly productModel: Model<ProductDocument>,
     @InjectModel(Address.name)
-    private addressModel: Model<AddressDocument>,
-    @InjectConnection() private connection: Connection,
+    private readonly addressModel: Model<AddressDocument>,
+    @InjectConnection() private readonly connection: Connection,
     private readonly inventoryService: InventoryService,
+    private readonly orderRealtimeService: OrderRealtimeService,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -312,7 +313,7 @@ export class OrderService {
   }
 
   // Staff xác nhận đơn hàng
-  async confirmOrder(orderId: string): Promise<Order> {
+  async confirmOrder(orderId: string, staffId?: string): Promise<Order> {
     const orderObjectId = this.ensureObjectId(orderId, 'order id');
 
     const order = await this.orderModel.findOne({
@@ -330,6 +331,7 @@ export class OrderService {
       );
     }
 
+    const previousStatus = order.status;
     order.status = 'confirmed';
     await order.save();
 
@@ -342,11 +344,32 @@ export class OrderService {
       throw new NotFoundException('Order not found after confirmation');
     }
 
+    // Thông báo cho các staff khác (trừ staff vừa xác nhận)
+    this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+      orderId,
+      previousStatus,
+      newStatus: 'confirmed',
+      message: 'Đơn hàng đã được xác nhận',
+      timestamp: new Date(),
+      updatedBy: staffId,
+      order: result,
+    });
+
+    // Thông báo cho customer
+    const userId = order.user_id.toString();
+    this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+      orderId,
+      previousStatus,
+      newStatus: 'confirmed',
+      message: 'Đơn hàng của bạn đã được xác nhận',
+      timestamp: new Date(),
+    });
+
     return result;
   }
 
   // Staff cập nhật đơn hàng đang giao
-  async shipOrder(orderId: string): Promise<Order> {
+  async shipOrder(orderId: string, staffId?: string): Promise<Order> {
     const orderObjectId = this.ensureObjectId(orderId, 'order id');
 
     const order = await this.orderModel.findOne({
@@ -364,6 +387,7 @@ export class OrderService {
       );
     }
 
+    const previousStatus = order.status;
     order.status = 'shipped';
     order.shipped_at = new Date();
     await order.save();
@@ -377,11 +401,32 @@ export class OrderService {
       throw new NotFoundException('Order not found after shipping');
     }
 
+    // Thông báo cho các staff khác
+    this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+      orderId,
+      previousStatus,
+      newStatus: 'shipped',
+      message: 'Đơn hàng đang được giao',
+      timestamp: new Date(),
+      updatedBy: staffId,
+      order: result,
+    });
+
+    // Thông báo cho customer
+    const userId = order.user_id.toString();
+    this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+      orderId,
+      previousStatus,
+      newStatus: 'shipped',
+      message: 'Đơn hàng của bạn đang được giao',
+      timestamp: new Date(),
+    });
+
     return result;
   }
 
   // Staff xác nhận giao hàng thành công
-  async deliverOrder(orderId: string): Promise<Order> {
+  async deliverOrder(orderId: string, staffId?: string): Promise<Order> {
     const orderObjectId = this.ensureObjectId(orderId, 'order id');
 
     const order = await this.orderModel.findOne({
@@ -399,6 +444,7 @@ export class OrderService {
       );
     }
 
+    const previousStatus = order.status;
     order.status = 'delivered';
     order.delivered_at = new Date();
     order.payment_status = 'paid';
@@ -414,6 +460,27 @@ export class OrderService {
       throw new NotFoundException('Order not found after delivery');
     }
 
+    // Thông báo cho các staff khác
+    this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+      orderId,
+      previousStatus,
+      newStatus: 'delivered',
+      message: 'Đơn hàng đã được giao thành công',
+      timestamp: new Date(),
+      updatedBy: staffId,
+      order: result,
+    });
+
+    // Thông báo cho customer
+    const userId = order.user_id.toString();
+    this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+      orderId,
+      previousStatus,
+      newStatus: 'delivered',
+      message: 'Đơn hàng của bạn đã được giao thành công',
+      timestamp: new Date(),
+    });
+
     return result;
   }
 
@@ -421,6 +488,7 @@ export class OrderService {
   async cancelOrderByStaff(
     orderId: string,
     cancelReason: string,
+    staffId?: string,
   ): Promise<Order> {
     const orderObjectId = this.ensureObjectId(orderId, 'order id');
 
@@ -443,6 +511,8 @@ export class OrderService {
     session.startTransaction();
 
     try {
+      const previousStatus = order.status;
+
       if (order.status !== 'cancelled') {
         const items = order.items.map((item) => ({
           product_id: item.product_id.toString(),
@@ -475,6 +545,27 @@ export class OrderService {
       if (!result) {
         throw new NotFoundException('Order not found after cancellation');
       }
+
+      // Thông báo cho các staff khác
+      this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+        orderId,
+        previousStatus,
+        newStatus: 'cancelled',
+        message: `Đơn hàng đã bị hủy: ${cancelReason}`,
+        timestamp: new Date(),
+        updatedBy: staffId,
+        order: result,
+      });
+
+      // Thông báo cho customer
+      const userId = order.user_id.toString();
+      this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+        orderId,
+        previousStatus,
+        newStatus: 'cancelled',
+        message: `Đơn hàng của bạn đã bị hủy: ${cancelReason}`,
+        timestamp: new Date(),
+      });
 
       return result;
     } catch (error) {

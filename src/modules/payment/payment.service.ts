@@ -22,14 +22,14 @@ import { Order, OrderDocument } from '../order/schema/order.schema';
 export class PaymentService {
   constructor(
     @InjectModel(PaymentTransaction.name)
-    private paymentTransactionModel: Model<PaymentTransactionDocument>,
+    private readonly paymentTransactionModel: Model<PaymentTransactionDocument>,
     @InjectModel(Order.name)
-    private orderModel: Model<OrderDocument>,
-    @InjectConnection() private connection: Connection,
-    private mailerService: MailerService,
+    private readonly orderModel: Model<OrderDocument>,
+    @InjectConnection() private readonly connection: Connection,
+    private readonly mailerService: MailerService,
   ) {}
 
-  private vnpay = new VNPay({
+  private readonly vnpay = new VNPay({
     tmnCode: process.env.VNPAY_TMN_CODE as string,
     secureSecret: process.env.VNPAY_SECURE_SECRET as string,
     vnpayHost: process.env.VNPAY_HOST as string,

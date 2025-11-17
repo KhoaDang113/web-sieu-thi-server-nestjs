@@ -10,11 +10,16 @@ import { Comment, CommentDocument } from './schema/comment.schema';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { GetCommentsDto } from './dto/get-comments.dto';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
 
 @Injectable()
 export class CommentService {
   constructor(
-    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    @InjectModel(Comment.name)
+    private readonly commentModel: Model<CommentDocument>,
+    private readonly notificationService: NotificationService,
+    private readonly notificationRealtimeService: NotificationRealtimeService,
   ) {}
 
   async getCommentsByProduct(dto: GetCommentsDto) {
@@ -120,20 +125,25 @@ export class CommentService {
       throw new BadRequestException('product_id is invalid');
     }
 
+    let parentComment;
+
     if (dto.parent_id) {
       if (!Types.ObjectId.isValid(dto.parent_id)) {
         throw new BadRequestException('parent_id is invalid');
       }
 
-      const parentComment = await this.commentModel.findOne({
-        _id: new Types.ObjectId(dto.parent_id),
-        is_deleted: false,
-      });
+      parentComment = await this.commentModel
+        .findOne({
+          _id: new Types.ObjectId(dto.parent_id),
+          is_deleted: false,
+        })
+        .populate('user_id', 'name avatar email role')
+        .lean();
 
       if (!parentComment) {
         throw new NotFoundException('Parent comment not found');
       }
-      if (parentComment.parent_id) {
+      if ((parentComment as CommentDocument).parent_id) {
         throw new BadRequestException(
           'Cannot reply to a reply. Maximum 2 levels allowed',
         );
@@ -156,13 +166,83 @@ export class CommentService {
       });
     }
 
-    return await this.commentModel
+    const createdComment = await this.commentModel
       .findById(comment._id)
       .populate('user_id', 'name avatar email role')
+      .populate('product_id', 'name slug')
       .select(
         '_id product_id user_id content parent_id reply_count created_at updated_at',
       )
       .lean();
+
+    // Tạo thông báo nếu đây là reply
+    if (dto.parent_id && parentComment && createdComment) {
+      // Lấy user_id từ parentComment
+      const parentUser = (parentComment as CommentDocument)
+        .user_id as unknown as {
+        _id: Types.ObjectId;
+        name: string;
+        avatar?: string;
+        role?: string;
+      };
+
+      const parentCommentUserId = parentUser._id.toString();
+
+      // Không tạo thông báo nếu user reply chính comment của mình
+      if (parentCommentUserId !== userId) {
+        const actor = createdComment.user_id as unknown as {
+          _id: string;
+          name: string;
+          avatar?: string;
+          role?: string;
+        };
+        const product = createdComment.product_id as unknown as {
+          _id: string;
+          name: string;
+          slug: string;
+        };
+        // Tạo thông báo trong database
+        const notification = await this.notificationService.createNotification({
+          user_id: parentUser._id,
+          actor_id: new Types.ObjectId(userId),
+          type: 'comment_reply',
+          title: 'Có người trả lời bình luận của bạn',
+          message: `${actor.name} đã trả lời bình luận của bạn về sản phẩm "${product.name}"`,
+          link: `/products-detail/${product._id.toString()}?comment=${dto.parent_id}`,
+          reference_id: comment._id?.toString(),
+          reference_type: 'comment',
+          metadata: {
+            comment_content: dto.content,
+            product_id: product._id,
+            product_name: product.name,
+            parent_comment_id: dto.parent_id,
+          },
+        });
+
+        // Gửi thông báo realtime
+        this.notificationRealtimeService.notifyCommentReply(
+          parentCommentUserId,
+          {
+            notificationId: (notification as unknown as { _id: string })._id,
+            type: 'comment_reply',
+            title: 'Có người trả lời bình luận của bạn',
+            message: `${actor.name} đã trả lời: "${dto.content.substring(0, 50)}${dto.content.length > 50 ? '...' : ''}"`,
+            link: `/products-detail/${product._id.toString()}?comment=${dto.parent_id}`,
+            actor: {
+              id: actor._id,
+              name: actor.name,
+              avatar: actor.avatar,
+            },
+            timestamp: new Date(),
+            metadata: {
+              product_name: product.name,
+            },
+          },
+        );
+      }
+    }
+
+    return createdComment;
   }
 
   async updateComment(

@@ -64,17 +64,24 @@ export class RealtimeGateway
         return;
       }
 
-      // Lưu userId vào socket data để dùng sau
-      (client.data as { userId: string }).userId = userId;
+      // Lưu userId và role vào socket data để dùng sau
+      (client.data as { userId: string; role?: string; type?: string }).userId =
+        userId;
+      (client.data as { userId: string; role?: string; type?: string }).role =
+        payload.role;
+      (client.data as { userId: string; role?: string; type?: string }).type =
+        payload.type;
 
-      // Join vào room của user
       await client.join(`user:${userId}`);
       this.logger.log(
         `Socket ${client.id} authenticated and joined user:${userId}`,
       );
       if (payload.role === 'staff' || payload.type === 'staff') {
         await client.join(`staff:${userId}`);
-        this.logger.log(`Socket ${client.id} also joined staff:${userId}`);
+        await client.join('all-staff'); // Join vào room chung cho tất cả staff
+        this.logger.log(
+          `Socket ${client.id} also joined staff:${userId} and all-staff room`,
+        );
       }
     } catch (error) {
       this.logger.error(
@@ -85,10 +92,18 @@ export class RealtimeGateway
   }
 
   async handleDisconnect(client: Socket) {
-    const userId = (client.data as { userId?: string }).userId;
+    const userId = (client.data as { userId?: string; role?: string }).userId;
+    const role = (client.data as { userId?: string; role?: string }).role;
     if (userId) {
       await client.leave(`user:${userId}`);
       this.logger.log(`Socket ${client.id} disconnected from user:${userId}`);
+      if (role === 'staff') {
+        await client.leave(`staff:${userId}`);
+        await client.leave('all-staff');
+        this.logger.log(
+          `Socket ${client.id} disconnected from all staff rooms`,
+        );
+      }
     }
   }
 
@@ -100,5 +115,31 @@ export class RealtimeGateway
   emitToRoom(roomId: string, event: string, payload: any) {
     this.io.to(roomId).emit(event, payload);
     this.logger.debug(`Emitted '${event}' to room:${roomId}`);
+  }
+
+  // Emit to all staff members
+  emitToAllStaff(event: string, payload: any) {
+    this.io.to('all-staff').emit(event, payload);
+    this.logger.debug(`Emitted '${event}' to all-staff`);
+  }
+
+  // Emit to all staff except one (useful when a staff updates and we want to notify others)
+  emitToAllStaffExcept(excludeStaffId: string, event: string, payload: any) {
+    // Get all sockets in all-staff room and filter out the excluded staff
+    const staffRoom = this.io.sockets.adapter.rooms.get('all-staff');
+    if (staffRoom) {
+      for (const socketId of staffRoom) {
+        const socket = this.io.sockets.sockets.get(socketId);
+        if (socket) {
+          const socketUserId = (socket.data as { userId?: string }).userId;
+          if (socketUserId !== excludeStaffId) {
+            socket.emit(event, payload);
+          }
+        }
+      }
+      this.logger.debug(
+        `Emitted '${event}' to all-staff except ${excludeStaffId}`,
+      );
+    }
   }
 }

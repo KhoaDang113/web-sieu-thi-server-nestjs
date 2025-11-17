@@ -9,6 +9,8 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { BullModule } from '@nestjs/bullmq';
 import { OrderProcessor } from './queue/order.processor';
 import { RealtimeModule } from '../realtime/realtime.module';
+import { NotificationModule } from '../notification/notification.module';
+import { User, UserSchema } from '../users/schemas/user.schema';
 
 @Module({
   imports: [
@@ -16,12 +18,14 @@ import { RealtimeModule } from '../realtime/realtime.module';
       { name: Order.name, schema: OrderSchema },
       { name: Product.name, schema: ProductSchema },
       { name: Address.name, schema: AddressSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     BullModule.registerQueue({
       name: 'order-queue',
     }),
     InventoryModule,
     RealtimeModule,
+    NotificationModule,
   ],
   controllers: [OrderController],
   providers: [OrderService, OrderProcessor],
