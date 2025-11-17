@@ -243,6 +243,29 @@ export class OrderService {
     return order;
   }
 
+  async getOrderByOrderId(orderId: string): Promise<Order> {
+    const orderObjectId = this.ensureObjectId(orderId, 'order id');
+    const order = await this.orderModel
+      .findOne({
+        _id: orderObjectId,
+        is_deleted: false,
+      })
+      .populate(
+        'address_id',
+        'full_name phone address ward district city zip_code',
+      )
+      .populate(
+        'items.product_id',
+        'name slug image_primary unit_price final_price discount_percent stock_status',
+      );
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return order;
+  }
+
   // User hủy đơn hàng (chỉ khi pending)
   async cancelOrderByUser(
     orderId: string,

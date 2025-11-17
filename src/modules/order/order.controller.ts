@@ -97,6 +97,11 @@ export class OrderController {
     return await this.orderService.getOrdersByUser(userId);
   }
 
+  @Get('order/:id')
+  async getOrderByOrderId(@Param('id') id: string) {
+    return await this.orderService.getOrderByOrderId(id);
+  }
+
   @Get(':id')
   async getOrderById(@Param('id') id: string, @Req() req: Request) {
     const userId = req.user?.id as string;
