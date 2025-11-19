@@ -4,8 +4,7 @@ import {
   OrderProcessingPayload,
   OrderSuccessPayload,
   OrderErrorPayload,
-  NewOrderNotificationPayload,
-  OrderStatusUpdatedPayload,
+  NewOrderPayload,
 } from './interfaces/order-realtime.interface';
 
 @Injectable()
@@ -25,26 +24,7 @@ export class OrderRealtimeService {
     this.rt.emitToUser(userId, 'order:error', data);
   }
 
-  // Notifications for staff
-  // Thông báo cho tất cả staff khi có đơn hàng mới
-  notifyNewOrderToStaff(data: NewOrderNotificationPayload) {
-    this.rt.emitToAllStaff('staff:new-order', data);
-  }
-
-  // Thông báo cho tất cả staff (trừ staff đã thực hiện) khi có cập nhật trạng thái
-  notifyOrderStatusUpdated(
-    excludeStaffId: string | undefined,
-    data: OrderStatusUpdatedPayload,
-  ) {
-    if (excludeStaffId) {
-      this.rt.emitToAllStaffExcept(excludeStaffId, 'staff:order-updated', data);
-    } else {
-      this.rt.emitToAllStaff('staff:order-updated', data);
-    }
-  }
-
-  // Thông báo cho customer khi staff cập nhật đơn hàng
-  notifyCustomerOrderUpdated(userId: string, data: OrderStatusUpdatedPayload) {
-    this.rt.emitToUser(userId, 'order:status-updated', data);
+  newOrderToStaff(data: NewOrderPayload) {
+    this.rt.emitToAllStaff('order:new', data);
   }
 }

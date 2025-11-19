@@ -11,6 +11,7 @@ import { Address, AddressDocument } from '../address/schema/address.schema';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { OrderRealtimeService } from '../realtime/order-realtime.service';
+import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
 
 @Injectable()
 export class OrderService {
@@ -24,6 +25,7 @@ export class OrderService {
     @InjectConnection() private readonly connection: Connection,
     private readonly inventoryService: InventoryService,
     private readonly orderRealtimeService: OrderRealtimeService,
+    private readonly notificationRealtimeService: NotificationRealtimeService,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -325,6 +327,19 @@ export class OrderService {
       if (!result) {
         throw new NotFoundException('Order not found after cancellation');
       }
+      // Thông báo cho các staff khác
+      await this.notificationRealtimeService.notifyOrderStatusUpdated(
+        undefined,
+        {
+          orderId,
+          previousStatus: 'pending',
+          newStatus: 'cancelled',
+          message: `Đơn hàng đã bị hủy vì ${cancelReason}. Bởi người dùng: ${userId.toString()}`,
+          timestamp: new Date(),
+          updatedBy: userId.toString(),
+          order: result,
+        },
+      );
 
       return result;
     } catch (error) {
@@ -368,7 +383,7 @@ export class OrderService {
     }
 
     // Thông báo cho các staff khác (trừ staff vừa xác nhận)
-    this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+    await this.notificationRealtimeService.notifyOrderStatusUpdated(staffId, {
       orderId,
       previousStatus,
       newStatus: 'confirmed',
@@ -380,7 +395,7 @@ export class OrderService {
 
     // Thông báo cho customer
     const userId = order.user_id.toString();
-    this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+    this.notificationRealtimeService.notifyCustomerOrderUpdated(userId, {
       orderId,
       previousStatus,
       newStatus: 'confirmed',
@@ -425,7 +440,7 @@ export class OrderService {
     }
 
     // Thông báo cho các staff khác
-    this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+    await this.notificationRealtimeService.notifyOrderStatusUpdated(staffId, {
       orderId,
       previousStatus,
       newStatus: 'shipped',
@@ -437,7 +452,7 @@ export class OrderService {
 
     // Thông báo cho customer
     const userId = order.user_id.toString();
-    this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+    this.notificationRealtimeService.notifyCustomerOrderUpdated(userId, {
       orderId,
       previousStatus,
       newStatus: 'shipped',
@@ -484,7 +499,7 @@ export class OrderService {
     }
 
     // Thông báo cho các staff khác
-    this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+    await this.notificationRealtimeService.notifyOrderStatusUpdated(staffId, {
       orderId,
       previousStatus,
       newStatus: 'delivered',
@@ -496,7 +511,7 @@ export class OrderService {
 
     // Thông báo cho customer
     const userId = order.user_id.toString();
-    this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+    this.notificationRealtimeService.notifyCustomerOrderUpdated(userId, {
       orderId,
       previousStatus,
       newStatus: 'delivered',
@@ -570,7 +585,7 @@ export class OrderService {
       }
 
       // Thông báo cho các staff khác
-      this.orderRealtimeService.notifyOrderStatusUpdated(staffId, {
+      await this.notificationRealtimeService.notifyOrderStatusUpdated(staffId, {
         orderId,
         previousStatus,
         newStatus: 'cancelled',
@@ -582,7 +597,7 @@ export class OrderService {
 
       // Thông báo cho customer
       const userId = order.user_id.toString();
-      this.orderRealtimeService.notifyCustomerOrderUpdated(userId, {
+      this.notificationRealtimeService.notifyCustomerOrderUpdated(userId, {
         orderId,
         previousStatus,
         newStatus: 'cancelled',

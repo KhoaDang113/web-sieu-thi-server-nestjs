@@ -32,6 +32,12 @@ export class NotificationController {
     return this.notificationService.getUserNotifications(userId, query);
   }
 
+  // Lấy danh sách thông báo của staff
+  @Get('staff')
+  async getNotificationForStaff(@Query() query: QueryNotificationDto) {
+    return await this.notificationService.getNotificationsForStaff(query);
+  }
+
   // Lấy số lượng thông báo chưa đọc
   @Get('unread-count')
   async getUnreadCount(@Req() req: Request) {
@@ -40,6 +46,11 @@ export class NotificationController {
       throw new UnauthorizedException('User not found');
     }
     return this.notificationService.getUnreadCount(userId);
+  }
+
+  @Get('staff/unread-count')
+  async getUnreadCountForStaff() {
+    return this.notificationService.getUnreadCountForStaff();
   }
 
   // Lấy chi tiết 1 thông báo
@@ -58,6 +69,12 @@ export class NotificationController {
     return this.notificationService.createNotification(dto);
   }
 
+  // Tạo thông báo mới cho staff
+  @Post('staff')
+  async createNotificationForStaff(@Body() dto: CreateNotificationDto) {
+    return await this.notificationService.createNotificationForStaff(dto);
+  }
+
   // Đánh dấu 1 thông báo là đã đọc
   @Patch(':id/read')
   async markAsRead(@Param('id') id: string, @Req() req: Request) {
@@ -66,6 +83,11 @@ export class NotificationController {
       throw new UnauthorizedException('User not found');
     }
     return this.notificationService.markAsRead(id, userId);
+  }
+
+  @Patch('staff/:id/read')
+  async markAsReadForStaff(@Param('id') id: string) {
+    return this.notificationService.markAsReadForStaff(id);
   }
 
   // Đánh dấu tất cả thông báo là đã đọc

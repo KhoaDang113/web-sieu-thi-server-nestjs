@@ -138,8 +138,8 @@ export class OrderController {
     @Query('status') status?: string,
   ) {
     return await this.orderService.getAllOrders(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
+      page ? Number.parseInt(page) : 1,
+      limit ? Number.parseInt(limit) : 20,
       status,
     );
   }

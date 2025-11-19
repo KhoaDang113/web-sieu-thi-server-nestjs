@@ -8,8 +8,8 @@ export class Notification {
   _id: Types.ObjectId;
 
   // User nhận thông báo
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-  user_id: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: false, index: true })
+  user_id?: Types.ObjectId;
 
   // User tạo hành động (người reply, staff, admin)
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
@@ -62,6 +62,13 @@ export class Notification {
   // Thời gian đọc
   @Prop({ type: Date })
   read_at: Date;
+
+  // Là staff
+  @Prop({ type: Boolean, default: false, required: false, index: true })
+  is_staff?: boolean;
+
+  @Prop({ type: Boolean, default: false, required: true })
+  is_notify?: boolean;
 
   created_at: Date;
   updated_at: Date;

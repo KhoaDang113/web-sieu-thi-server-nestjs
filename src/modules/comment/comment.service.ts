@@ -217,6 +217,7 @@ export class CommentService {
             product_name: product.name,
             parent_comment_id: dto.parent_id,
           },
+          is_notify: false,
         });
 
         // Gửi thông báo realtime

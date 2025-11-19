@@ -123,22 +123,38 @@ export class RealtimeGateway
     this.logger.debug(`Emitted '${event}' to all-staff`);
   }
 
-  // Emit to all staff except one (useful when a staff updates and we want to notify others)
-  emitToAllStaffExcept(excludeStaffId: string, event: string, payload: any) {
-    // Get all sockets in all-staff room and filter out the excluded staff
-    const staffRoom = this.io.sockets.adapter.rooms.get('all-staff');
-    if (staffRoom) {
-      for (const socketId of staffRoom) {
-        const socket = this.io.sockets.sockets.get(socketId);
-        if (socket) {
-          const socketUserId = (socket.data as { userId?: string }).userId;
-          if (socketUserId !== excludeStaffId) {
-            socket.emit(event, payload);
-          }
+  async emitToAllStaffExcept(
+    excludeStaffId: string,
+    event: string,
+    payload: any,
+  ) {
+    if (!this.io) {
+      this.logger.warn('emitToAllStaffExcept called but io is not ready');
+      return;
+    }
+
+    try {
+      const sockets = await this.io.in('all-staff').fetchSockets();
+
+      for (const socket of sockets) {
+        const data = socket.data as
+          | { userId?: string; role?: string; type?: string }
+          | undefined;
+        const socketUserId = data?.userId;
+
+        if (socketUserId && socketUserId !== excludeStaffId) {
+          socket.emit(event, payload);
         }
       }
+
       this.logger.debug(
         `Emitted '${event}' to all-staff except ${excludeStaffId}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `emitToAllStaffExcept error: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
       );
     }
   }

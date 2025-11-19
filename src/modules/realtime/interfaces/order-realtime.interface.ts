@@ -18,11 +18,18 @@ export interface OrderErrorPayload {
 
 // Staff notification payloads
 export interface NewOrderNotificationPayload {
-  orderId: string;
-  userId: string;
-  order: any;
+  notificationId: string;
+  type: string;
+  title: string;
   message: string;
+  link: string;
+  actor: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
   timestamp: Date;
+  metadata: Record<string, any>;
 }
 
 export interface OrderStatusUpdatedPayload {
@@ -33,4 +40,10 @@ export interface OrderStatusUpdatedPayload {
   timestamp: Date;
   updatedBy?: string; // staff ID who updated
   order?: any;
+}
+
+export interface NewOrderPayload {
+  orderId: string;
+  message: string;
+  order: any;
 }

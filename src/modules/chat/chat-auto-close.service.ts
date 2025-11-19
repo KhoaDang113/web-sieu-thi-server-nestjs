@@ -7,6 +7,7 @@ import {
   ConversationDocument,
 } from './schema/conversation.schema';
 import Redis from 'ioredis';
+import { ChatGateway } from './chat.getway';
 
 @Injectable()
 export class ChatAutoCloseService {
@@ -16,6 +17,7 @@ export class ChatAutoCloseService {
     @InjectModel(Conversation.name)
     private readonly convModel: Model<ConversationDocument>,
     @Inject('REDIS') private readonly redis: Redis,
+    private readonly gateway: ChatGateway,
   ) {}
 
   @Cron(CronExpression.EVERY_10_MINUTES)
@@ -41,20 +43,26 @@ export class ChatAutoCloseService {
       let closedCount = 0;
 
       for (const conv of inactiveConversations) {
-        conv.state = 'CLOSED';
-        await conv.save();
-
         if (conv.current_agent_id) {
           const agentId = conv.current_agent_id.toString();
           const current = await this.redis.get(`agent:${agentId}:current`);
 
-          if (current && parseInt(current, 10) > 0) {
+          if (current && Number.parseInt(current, 10) > 0) {
             await this.redis.decr(`agent:${agentId}:current`);
             this.logger.log(
               `Decreased agent ${agentId} count for conversation ${String(conv._id)}`,
             );
           }
+
+          if (agentId) {
+            this.gateway.emitToStaff(agentId, 'conversation.closed', {
+              conversation_id: String(conv._id),
+            });
+          }
         }
+        conv.state = 'CLOSED';
+        conv.current_agent_id = undefined;
+        await conv.save();
 
         closedCount++;
       }

@@ -57,90 +57,68 @@ export class OrderProcessor extends WorkerHost {
         order,
       });
 
-      // Thông báo cho tất cả staff đang online về đơn hàng mới
-      this.orderRealtimeService.notifyNewOrderToStaff({
-        orderId,
-        userId,
-        order,
-        message: 'Có đơn hàng mới cần xử lý',
-        timestamp: new Date(),
-      });
-      this.logger.log(`Notified all staff about new order ${orderId}`);
-
       // Lấy thông tin customer để dùng làm actor
       const customer = await this.userModel
         .findById(userId)
         .select('name avatar email')
         .lean();
 
-      // Lấy danh sách tất cả staff
-      const staffUsers = await this.userModel
-        .find({ role: 'staff' })
-        .select('_id')
-        .lean();
+      if (customer) {
+        try {
+          const orderData = order as unknown as Order;
+          const orderTotal = orderData.total || 0;
+          const orderItemsCount = orderData.items?.length || 0;
 
-      // Tạo notification cho mỗi staff
-      if (staffUsers.length > 0 && customer) {
-        const orderData = order as unknown as Order;
-        const orderTotal = orderData.total || 0;
-        const orderItemsCount = orderData.items?.length || 0;
+          const notification =
+            await this.notificationService.createNotificationForStaff({
+              actor_id: new Types.ObjectId(userId),
+              type: 'order_update',
+              title: 'Có đơn hàng mới cần xử lý',
+              message: `Khách hàng ${customer.name} vừa đặt đơn hàng #${orderId} với ${orderItemsCount} sản phẩm, tổng giá trị ${Number(orderTotal).toLocaleString('vi-VN')}đ`,
+              link: `/staff/orders/order/${orderId}`,
+              reference_id: orderId,
+              reference_type: 'order',
+              is_staff: true,
+              metadata: {
+                order_id: orderId,
+                customer_id: userId,
+                customer_name: customer.name,
+                total: orderTotal,
+                items_count: orderItemsCount,
+              },
+            });
 
-        // Tạo notification cho từng staff
-        for (const staff of staffUsers) {
-          try {
-            const notification =
-              await this.notificationService.createNotification({
-                user_id: staff._id as unknown as Types.ObjectId,
-                actor_id: new Types.ObjectId(userId),
-                type: 'order_update',
-                title: 'Có đơn hàng mới cần xử lý',
-                message: `Khách hàng ${customer.name} vừa đặt đơn hàng #${orderId} với ${orderItemsCount} sản phẩm, tổng giá trị ${Number(orderTotal).toLocaleString('vi-VN')}đ`,
-                link: `/staff/orders/${orderId}`,
-                reference_id: orderId,
-                reference_type: 'order',
-                metadata: {
-                  order_id: orderId,
-                  customer_id: userId,
-                  customer_name: customer.name,
-                  total: orderTotal,
-                  items_count: orderItemsCount,
-                },
-              });
-
-            // Gửi thông báo realtime cho staff
-            if (notification) {
-              const staffId = staff._id.toString();
-              this.notificationRealtimeService.notifyUser(staffId, {
-                notificationId: (notification as unknown as { _id: string })
-                  ._id,
-                type: 'order_update',
-                title: 'Có đơn hàng mới cần xử lý',
-                message: `Khách hàng ${customer.name} vừa đặt đơn hàng #${orderId}`,
-                link: `/staff/orders/${orderId}`,
-                actor: {
-                  id: userId,
-                  name: customer.name,
-                  avatar: customer.avatar,
-                },
-                timestamp: new Date(),
-                metadata: {
-                  order_id: orderId,
-                  customer_name: customer.name,
-                },
-              });
-            }
-          } catch (error) {
-            const staffId = staff._id.toString();
-            this.logger.error(
-              `Failed to create notification for staff ${staffId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            );
+          if (notification) {
+            this.notificationRealtimeService.notifyNewOrderToStaff({
+              notificationId: (notification as unknown as { _id: string })._id,
+              type: 'order_update',
+              title: 'Có đơn hàng mới cần xử lý',
+              message: `Khách hàng ${customer.name} vừa đặt đơn hàng #${orderId}`,
+              link: `/staff/orders/order/${orderId}`,
+              actor: {
+                id: userId,
+                name: customer.name,
+                avatar: customer.avatar,
+              },
+              timestamp: new Date(),
+              metadata: {
+                order_id: orderId,
+                customer_name: customer.name,
+              },
+            });
           }
+        } catch (error) {
+          this.logger.error(
+            `Failed to create notification for customer ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
         }
-
-        this.logger.log(
-          `Created notifications for ${staffUsers.length} staff members about order ${orderId}`,
-        );
       }
+
+      this.orderRealtimeService.newOrderToStaff({
+        orderId,
+        message: 'Đơn hàng đã được tạo thành công',
+        order,
+      });
 
       return {
         success: true,

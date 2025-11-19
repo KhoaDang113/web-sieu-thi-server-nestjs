@@ -23,7 +23,7 @@ export class NotificationService {
   async createNotification(
     dto: CreateNotificationDto,
   ): Promise<Notification | null> {
-    if (!Types.ObjectId.isValid(dto.user_id)) {
+    if (dto.user_id && !Types.ObjectId.isValid(dto.user_id)) {
       throw new BadRequestException('Invalid user_id');
     }
     if (!Types.ObjectId.isValid(dto.actor_id)) {
@@ -41,6 +41,35 @@ export class NotificationService {
         ? new Types.ObjectId(dto.reference_id)
         : undefined,
       reference_type: dto.reference_type,
+      metadata: dto.metadata,
+    });
+
+    await notification.save();
+
+    return await this.notificationModel
+      .findById(notification._id)
+      .populate('actor_id', 'name avatar email role')
+      .lean();
+  }
+
+  async createNotificationForStaff(
+    dto: CreateNotificationDto,
+  ): Promise<Notification | null> {
+    if (!Types.ObjectId.isValid(dto.actor_id)) {
+      throw new BadRequestException('Invalid actor_id');
+    }
+
+    const notification = new this.notificationModel({
+      actor_id: new Types.ObjectId(dto.actor_id),
+      type: dto.type,
+      title: dto.title,
+      message: dto.message,
+      link: dto.link,
+      reference_id: dto.reference_id
+        ? new Types.ObjectId(dto.reference_id)
+        : undefined,
+      reference_type: dto.reference_type,
+      is_staff: true,
       metadata: dto.metadata,
     });
 
@@ -108,6 +137,56 @@ export class NotificationService {
     };
   }
 
+  // Lấy danh sách thông báo của user
+  async getNotificationsForStaff(query: QueryNotificationDto) {
+    const { page = 1, limit = 20, type, is_read, unread_only } = query;
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, any> = {
+      is_staff: true,
+      is_deleted: false,
+      is_hidden: false,
+    };
+
+    if (type) {
+      filter.type = type;
+    }
+
+    if (unread_only) {
+      filter.is_read = false;
+    } else if (is_read !== undefined) {
+      filter.is_read = is_read;
+    }
+
+    const [notifications, total, unreadCount] = await Promise.all([
+      this.notificationModel
+        .find(filter)
+        .populate('actor_id', 'name avatar email role')
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      this.notificationModel.countDocuments(filter),
+      this.notificationModel.countDocuments({
+        is_staff: true,
+        is_deleted: false,
+        is_hidden: false,
+        is_read: false,
+      }),
+    ]);
+
+    return {
+      notifications,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      unreadCount,
+    };
+  }
+
   // Đánh dấu đã đọc
   async markAsRead(notificationId: string, userId: string) {
     if (!Types.ObjectId.isValid(notificationId)) {
@@ -122,6 +201,27 @@ export class NotificationService {
 
     if (!notification) {
       throw new NotFoundException('Notification not found');
+    }
+
+    notification.is_read = true;
+    notification.read_at = new Date();
+    await notification.save();
+
+    return notification;
+  }
+
+  async markAsReadForStaff(notificationId: string) {
+    if (!Types.ObjectId.isValid(notificationId)) {
+      throw new BadRequestException('Invalid notificationId');
+    }
+
+    const notification = await this.notificationModel.findOne({
+      _id: new Types.ObjectId(notificationId),
+      is_deleted: false,
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found 123');
     }
 
     notification.is_read = true;
@@ -236,6 +336,19 @@ export class NotificationService {
 
     const count = await this.notificationModel.countDocuments({
       user_id: new Types.ObjectId(userId),
+      is_deleted: false,
+      is_hidden: false,
+      is_read: false,
+    });
+
+    return {
+      unreadCount: count,
+    };
+  }
+
+  async getUnreadCountForStaff() {
+    const count = await this.notificationModel.countDocuments({
+      is_staff: true,
       is_deleted: false,
       is_hidden: false,
       is_read: false,

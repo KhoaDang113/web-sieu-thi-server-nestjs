@@ -1,10 +1,16 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 import { Types } from 'mongoose';
 
 export class CreateNotificationDto {
   @IsString()
-  @IsNotEmpty()
-  user_id: Types.ObjectId;
+  @IsOptional()
+  user_id?: Types.ObjectId;
 
   @IsString()
   @IsNotEmpty()
@@ -33,6 +39,14 @@ export class CreateNotificationDto {
   @IsString()
   @IsOptional()
   reference_type?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  is_staff?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  is_notify?: boolean;
 
   @IsOptional()
   metadata?: Record<string, any>;
