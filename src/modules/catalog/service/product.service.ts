@@ -53,9 +53,30 @@ export class ProductService {
     const actualLimit: number = skip === 0 ? 40 : 10;
 
     const filters: Record<string, any> = { is_deleted: false, is_active: true };
-
+    let categories;
+    let brands;
     if (key) {
       filters.$text = { $search: key };
+      
+      const productsForCategories  = await this.productModel.find(filters).select("name category_id brand_id").lean();
+      
+      const finalProductsForCategories = productsForCategories.filter(p => new RegExp(key, 'i').test(p.name))
+
+      const brandIds = [...new Set(finalProductsForCategories.map(p => p.brand_id?.toString()))];
+
+      const categoryIds = [...new Set(finalProductsForCategories.map(p => p.category_id.toString()))];
+
+      brands = await this.brandModel.find({ 
+        _id: { $in: brandIds },
+        is_active: true,
+        is_deleted: false
+      }).select("_id name slug image").lean();
+
+      categories = await this.categoryModel.find({ 
+        _id: { $in: categoryIds },
+        is_active: true,
+        is_deleted: false
+      }).select("_id name slug description image").lean();
     }
     if (category) {
       const categorySlugs = category.split(' ').filter((slug) => slug.trim());
@@ -112,8 +133,8 @@ export class ProductService {
       sortCriteria = { created_at: -1 };
     }
 
-    const query = this.productModel.find(filters).skip(skip).limit(actualLimit);
-
+    const query = this.productModel.find(filters);
+    
     if (useTextScore) {
       query
         .select({
@@ -140,12 +161,20 @@ export class ProductService {
     }
 
     const products = await query.lean();
+    // thêm này để lọc theo tiếng chuẩn hơn xíu (trick lỏad)
+    const filteredProducts = key 
+      ? products.filter(p => new RegExp(key, 'i').test(p.name))
+      : products;
+
+    const paginatedProducts = filteredProducts.slice(skip, skip + actualLimit);
 
     return {
-      total: products.length,
+      total: paginatedProducts.length,
       skip,
       actualLimit,
-      products,
+      products: paginatedProducts,
+      categories,
+      brands
     };
   }
   async getProductsByCategorySlugOrAll(
