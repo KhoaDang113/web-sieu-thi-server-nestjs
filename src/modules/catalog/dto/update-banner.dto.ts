@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsBoolean } from 'class-validator';
-
+import { Transform } from 'class-transformer';
 export class UpdateBannerDto {
   @IsOptional()
   @IsString()
@@ -15,5 +15,10 @@ export class UpdateBannerDto {
 
   @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value as boolean;
+  })
   is_active?: boolean;
 }
