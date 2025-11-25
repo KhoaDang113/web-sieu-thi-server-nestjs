@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateOrderRatingDto } from './dto/create-order-rating.dto';
 import { UpdateOrderRatingDto } from './dto/update-order-rating.dto';
 import { AdminResponseDto } from './dto/admin-response.dto';
@@ -6,6 +6,7 @@ import { OrderRating } from './schema/order-rating.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Order } from '../order/schema/order.schema';
+import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
 
 @Injectable()
 export class OrderRatingService {
@@ -13,8 +14,9 @@ export class OrderRatingService {
   constructor(
     @InjectModel(OrderRating.name) private orderRatingModel: Model<OrderRating>,
     @InjectModel(Order.name) private orderModel: Model<Order>,
+    private cloudinaryService: CloudinaryService,
   ) {}
-  async create(createOrderRatingDto: CreateOrderRatingDto, userId: string) {
+  async create(createOrderRatingDto: CreateOrderRatingDto, userId: string, file: Express.Multer.File[]) {
     if(!userId){
       throw new UnauthorizedException('User not found');
     }
@@ -33,9 +35,22 @@ export class OrderRatingService {
       throw new ConflictException('Order already rated');
     }
 
+    let imageUrl = createOrderRatingDto.images;
+    if (file) {
+      try {
+        imageUrl = await this.cloudinaryService.uploadMultipleImages(
+          file,
+          'WebSieuThi/order-ratings',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
+    }
+
     const orderRating = new this.orderRatingModel({
       ...createOrderRatingDto,
       user_id: new Types.ObjectId(userId),
+      images: imageUrl,
     });
 
 
@@ -88,7 +103,12 @@ export class OrderRatingService {
     return orderRating;
   }
 
-  async update(id: string, updateOrderRatingDto: UpdateOrderRatingDto, userId: string) {
+  async update(
+    id: string,
+    updateOrderRatingDto: UpdateOrderRatingDto,
+    userId: string,
+    file?: Express.Multer.File[]
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Invalid order rating ID');
     }
@@ -102,8 +122,27 @@ export class OrderRatingService {
       throw new UnauthorizedException('You can only update your own ratings');
     }
 
+    let imageUrl = updateOrderRatingDto.images;
+    if (file && file.length > 0) {
+      try {
+        imageUrl = await this.cloudinaryService.uploadMultipleImages(
+          file,
+          'WebSieuThi/order-ratings',
+        );
+      } catch {
+        throw new BadRequestException('Error uploading image');
+      }
+    }
+
     const updatedOrderRating = await this.orderRatingModel
-      .findByIdAndUpdate(id, updateOrderRatingDto, { new: true })
+      .findByIdAndUpdate(
+        id,
+        {
+          ...updateOrderRatingDto,
+          ...(imageUrl && { images: imageUrl }),
+        },
+        { new: true }
+      )
       .populate('order_id')
       .populate('user_id')
       .select('-__v')
