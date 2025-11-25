@@ -61,7 +61,6 @@ export class TypeComboService {
       throw new NotFoundException('Not found type combo');
     }
 
-
     return typeCombo;
   }
 

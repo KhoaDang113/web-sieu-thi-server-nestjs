@@ -215,7 +215,7 @@ export class OrderService {
         'name slug image_primary images unit_price final_price discount_percent stock_status unit',
       )
       .select(
-        'user_id address_id items subtotal discount shipping_fee total status payment_status created_at updated_at',
+        'user_id address_id items subtotal discount shipping_fee total status payment_status created_at updated_at is_rating',
       )
       .sort({ created_at: -1 });
   }

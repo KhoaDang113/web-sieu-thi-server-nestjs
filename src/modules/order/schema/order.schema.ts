@@ -89,6 +89,10 @@ export class Order {
     email: string;
   } | null;
 
+
+  @Prop({ type: Boolean, default: false })
+  is_rating: boolean;
+
   @Prop({ type: Boolean, default: false })
   is_deleted: boolean;
 }

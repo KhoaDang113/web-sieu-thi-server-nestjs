@@ -20,6 +20,7 @@ import { StaffModule } from './modules/staff/staff.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { MailerModule } from './shared/mailer/mailer.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { OrderRatingModule } from './modules/order-rating/order-rating.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -77,6 +78,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     StaffModule,
     RedisModule,
     MailerModule,
+    OrderRatingModule,
   ],
   providers: [
     {
