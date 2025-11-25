@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Model, Types, Connection } from 'mongoose';
@@ -103,7 +104,7 @@ export class OrderService {
             `${item.name}: Available ${item.available}, Requested ${item.requested}`,
         )
         .join('; ');
-      throw new BadRequestException(`Insufficient stock: ${errorMessage}`);
+      throw new ConflictException(`Insufficient stock: ${errorMessage}`); 
     }
 
     const orderItems = createOrderDto.items.map((item) => {

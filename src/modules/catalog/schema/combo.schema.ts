@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types,  Schema as MongooseSchema } from 'mongoose';
 
 export type ComboDocument = Combo & Document;
 
@@ -13,6 +13,9 @@ export class Combo {
 
   @Prop({ required: true })
   description: string;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'TypeCombo', default: null })
+  type_combo_id: Types.ObjectId;
 
   @Prop({ type: Boolean, default: true })
   is_active: boolean;

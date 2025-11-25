@@ -16,26 +16,19 @@ import { Cart, CartSchema } from './schema/cart.schema';
 import { CartService } from './service/cart.service';
 import { Banner, BannerSchema } from './schema/banner.schema';
 import { BannerService } from './service/banner.service';
-// import { Address, AddressSchema } from '../address/schema/address.schema';
-// import { AddressService } from './service/address.service';
-// import { AddressController } from './controller/address.controller';
 import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
 import { Brand, BrandSchema } from './schema/brand.schema';
 import { Rating, RatingSchema } from './schema/rating.schema';
 import { RatingService } from './service/rating.service';
 import { RatingController } from './controller/rating.controller';
-// import { Comment, CommentSchema } from './schema/comment.schema';
-// import { CommentService } from './service/comment.service';
-// import { CommentController } from '../comment/comment.controller';
 import { Combo, ComboSchema } from './schema/combo.schema';
 import { ComboService } from './service/combo.service';
 import { ComboController } from './controller/combo.controller';
 import { BrandService } from './service/brand.service';
 import { BrandController } from './controller/brand.controller';
-// import { Order, OrderSchema } from '../order/schema/order.schema';
-// import { OrderService } from '../order/order.service';
-// import { OrderController } from '../order/order.controller';
-// Inventory moved to its own module
+import { TypeCombo, TypeComboSchema } from './schema/type-combo.schema';
+import { TypeComboService } from './service/type-combo.service';
+import { TypeComboController } from './controller/type-combo.controller';
 
 @Module({
   imports: [
@@ -45,12 +38,10 @@ import { BrandController } from './controller/brand.controller';
       { name: ProductSuggestion.name, schema: ProductSuggestionSchema },
       { name: Cart.name, schema: CartSchema },
       { name: Banner.name, schema: BannerSchema },
-      // { name: Address.name, schema: AddressSchema },
       { name: Brand.name, schema: BrandSchema },
       { name: Rating.name, schema: RatingSchema },
-      // { name: Comment.name, schema: CommentSchema },
       { name: Combo.name, schema: ComboSchema },
-      // { name: Order.name, schema: OrderSchema },
+      { name: TypeCombo.name, schema: TypeComboSchema },
     ]),
   ],
   controllers: [
@@ -58,12 +49,10 @@ import { BrandController } from './controller/brand.controller';
     ProductController,
     CartController,
     BannerController,
-    // AddressController,
     RatingController,
-    // CommentController,
     ComboController,
     BrandController,
-    // OrderController,
+    TypeComboController,
   ],
   providers: [
     ProductService,
@@ -71,24 +60,20 @@ import { BrandController } from './controller/brand.controller';
     CloudinaryService,
     CartService,
     BannerService,
-    // AddressService,
     RatingService,
-    // CommentService,
     ComboService,
     BrandService,
-    // OrderService,
+    TypeComboService, 
   ],
   exports: [
     ProductService,
     CategoryService,
     CartService,
     BannerService,
-    // AddressService,
     RatingService,
-    // CommentService,
     ComboService,
     BrandService,
-    // OrderService,
+    TypeComboService, 
   ],
 })
 export class CatalogModule {}

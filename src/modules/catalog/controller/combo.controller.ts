@@ -28,8 +28,9 @@ export class ComboController {
     @Query('page') page: number,
     @Query('limit') limit: number,
     @Query('key') key?: string,
+    @Query('type_combo_id') type_combo_id?: string,
   ): Promise<any> {
-    return await this.comboService.getCombosAdmin(page, limit, key);
+    return await this.comboService.getCombosAdmin(page, limit, key, type_combo_id);
   }
 
   @Public()
