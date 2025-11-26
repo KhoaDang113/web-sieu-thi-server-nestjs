@@ -144,6 +144,13 @@ export class OrderController {
     );
   }
 
+  // Staff lấy chi tiết đơn hàng
+  @Get('admin/:id')
+  @UseGuards(StaffGuard)
+  async getOrderByIdForStaff(@Param('id') id: string) {
+    return await this.orderService.getOrderByOrderId(id);
+  }
+
   // Staff xác nhận đơn hàng
   @Patch('admin/:id/confirm')
   @UseGuards(StaffGuard)

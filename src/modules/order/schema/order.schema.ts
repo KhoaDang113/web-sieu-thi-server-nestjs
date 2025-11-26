@@ -31,6 +31,12 @@ export class Order {
   @Prop({ type: Types.ObjectId, ref: 'Address', required: true })
   address_id: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', required: false })
+  shipper_id?: Types.ObjectId;
+
+  @Prop({ type: Date, default: null })
+  assigned_at?: Date;
+
   @Prop({ type: [OrderItem], default: [] })
   items: OrderItem[];
 

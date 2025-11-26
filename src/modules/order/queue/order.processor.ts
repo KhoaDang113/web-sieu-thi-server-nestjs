@@ -49,12 +49,11 @@ export class OrderProcessor extends WorkerHost {
       const orderId = orderDoc._id.toString();
       this.logger.log(`Order ${orderId} created successfully`);
 
-      // Thông báo cho customer
       this.orderRealtimeService.orderSuccess(userId, {
         jobId: job.id as string,
         orderId,
         message: 'Đơn hàng đã được tạo thành công',
-        order,
+        order: order as any,
       });
 
       // Lấy thông tin customer để dùng làm actor
@@ -100,6 +99,7 @@ export class OrderProcessor extends WorkerHost {
                 name: customer.name,
                 avatar: customer.avatar,
               },
+              // order: order as any,
               timestamp: new Date(),
               metadata: {
                 order_id: orderId,
@@ -124,7 +124,7 @@ export class OrderProcessor extends WorkerHost {
         success: true,
         orderId: orderId,
         message: 'Order created successfully',
-        order,
+        order: order as any,
       };
     } catch (error: unknown) {
       const errorMessage =

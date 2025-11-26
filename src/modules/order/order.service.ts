@@ -13,6 +13,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { OrderRealtimeService } from '../realtime/order-realtime.service';
 import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
+import { ShipperRealtimeService } from '../realtime/shipper-realtime.service';
 
 @Injectable()
 export class OrderService {
@@ -27,6 +28,7 @@ export class OrderService {
     private readonly inventoryService: InventoryService,
     private readonly orderRealtimeService: OrderRealtimeService,
     private readonly notificationRealtimeService: NotificationRealtimeService,
+    private readonly shipperRealtimeService: ShipperRealtimeService,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -116,7 +118,7 @@ export class OrderService {
         throw new NotFoundException(`Product ${item.product_id} not found`);
       }
 
-      const unitPrice = product.final_price || product.unit_price;
+      const unitPrice = product.unit_price;
       const discountPercent = product.discount_percent || 0;
       const totalPrice =
         unitPrice * item.quantity * (1 - discountPercent / 100);
@@ -402,6 +404,13 @@ export class OrderService {
       newStatus: 'confirmed',
       message: 'Đơn hàng của bạn đã được xác nhận',
       timestamp: new Date(),
+    });
+
+    // Thông báo cho các shipper đang online
+    this.shipperRealtimeService.notifyNewOrderToShippers({
+      orderId,
+      message: 'Có đơn hàng mới cần giao',
+      order: result,
     });
 
     return result;

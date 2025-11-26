@@ -83,6 +83,13 @@ export class RealtimeGateway
           `Socket ${client.id} also joined staff:${userId} and all-staff room`,
         );
       }
+      if (payload.role === 'shipper' || payload.type === 'shipper') {
+        await client.join(`shipper:${userId}`);
+        await client.join('all-shippers'); // Join vào room chung cho tất cả shipper
+        this.logger.log(
+          `Socket ${client.id} also joined shipper:${userId} and all-shippers room`,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Socket ${client.id} authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -121,6 +128,12 @@ export class RealtimeGateway
   emitToAllStaff(event: string, payload: any) {
     this.io.to('all-staff').emit(event, payload);
     this.logger.debug(`Emitted '${event}' to all-staff`);
+  }
+
+  // Emit to all shippers
+  emitToAllShippers(event: string, payload: any) {
+    this.io.to('all-shippers').emit(event, payload);
+    this.logger.debug(`Emitted '${event}' to all-shippers`);
   }
 
   async emitToAllStaffExcept(

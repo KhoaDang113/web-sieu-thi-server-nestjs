@@ -28,6 +28,7 @@ export interface NewOrderNotificationPayload {
     name: string;
     avatar?: string;
   };
+  // order: any;
   timestamp: Date;
   metadata: Record<string, any>;
 }
