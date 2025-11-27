@@ -23,7 +23,7 @@ export class OrderRatingService {
 
     const order = await this.orderModel.findOne({ _id: createOrderRatingDto.order_id }).exec();
     if (!order) {
-      throw new NotFoundException('Order not found'); 
+      throw new NotFoundException('Order not found');
     }
 
     if(order.user_id.toString() !== userId){
@@ -53,7 +53,6 @@ export class OrderRatingService {
       images: imageUrl,
     });
 
-
     order.is_rating = true;
     await order.save();
 
@@ -62,11 +61,14 @@ export class OrderRatingService {
 
   async findAll(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    
+   
     const [data, total] = await Promise.all([
       this.orderRatingModel
         .find()
-        .populate('order_id')
+        .populate({
+          path: 'order_id',
+          populate: { path: 'address_id' }
+        })
         .populate('user_id')
         .select('-__v')
         .sort({ createdAt: -1 })
@@ -90,12 +92,37 @@ export class OrderRatingService {
       throw new NotFoundException('Invalid order rating ID');
     }
 
-    const orderRating = await this.orderRatingModel.findOne({ order_id: id })
-      .populate('order_id')
+
+    const orderRating = await this.orderRatingModel.findById(id)
+      .populate({
+        path: 'order_id',
+        populate: { path: 'address_id' }
+      })
       .populate('user_id')
       .select('-__v')
       .exec();
-    
+   
+    if (!orderRating) {
+      throw new NotFoundException('Order rating not found');
+    }
+
+    return orderRating;
+  }
+
+  async findByOrder(orderId: string) {
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new NotFoundException('Invalid order ID');
+    }
+
+    const orderRating = await this.orderRatingModel.findOne({ order_id: orderId })
+      .populate({
+        path: 'order_id',
+        populate: { path: 'address_id' }
+      })
+      .populate('user_id')
+      .select('-__v')
+      .exec();
+
     if (!orderRating) {
       throw new NotFoundException('Order rating not found');
     }
@@ -143,7 +170,10 @@ export class OrderRatingService {
         },
         { new: true }
       )
-      .populate('order_id')
+      .populate({
+        path: 'order_id',
+        populate: { path: 'address_id' }
+      })
       .populate('user_id')
       .select('-__v')
       .exec();
@@ -170,7 +200,10 @@ export class OrderRatingService {
         },
         { new: true }
       )
-      .populate('order_id')
+      .populate({
+        path: 'order_id',
+        populate: { path: 'address_id' }
+      })
       .populate('user_id')
       .select('-__v')
       .exec();
