@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ProductService } from '../service/product.service';
-import { Public } from '../../auth/decorators/public.decorator';
+import { Public } from '../../../common/decorators/public.decorator';
 
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';

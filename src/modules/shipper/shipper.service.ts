@@ -2,23 +2,30 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Types, ClientSession, Connection } from 'mongoose';
 import { Shipper, ShipperDocument } from './schema/shipper.schema';
 import { Order, OrderDocument } from '../order/schema/order.schema';
 import { SetOnlineStatusDto } from './dto/set-online-status.dto';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import Redis from 'ioredis';
+import { AssignOrderService } from '../order/assign-order.service';
 
 @Injectable()
 export class ShipperService {
   constructor(
+    @Inject('REDIS') private readonly redis: Redis,
     @InjectModel(Shipper.name)
     private readonly shipperModel: Model<ShipperDocument>,
     @InjectModel(Order.name)
     private readonly orderModel: Model<OrderDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectConnection()
+    private readonly connection: Connection,
+    private readonly assignOrderService: AssignOrderService,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -29,24 +36,50 @@ export class ShipperService {
   }
 
   async createForUser(userId: string) {
-    const userObjectId = new Types.ObjectId(userId);
+    const session: ClientSession = await this.connection.startSession();
+        
+    try{
+      const shipper = await session.withTransaction(async () => { 
+        const userObjectId = new Types.ObjectId(userId);
 
-    const user = await this.userModel.findById(userObjectId);
-    if (!user) {
-      throw new NotFoundException('User not found');
+        const user = await this.userModel.findById(userObjectId).session(session);
+        if (!user) {
+          throw new NotFoundException('User not found');
+        }
+
+        const existing = await this.shipperModel.findOne({ user_id: userObjectId }).session(session);
+        if (existing) {
+          throw new BadRequestException('User is already a shipper');
+        }
+
+        const [shipperDoc] = await this.shipperModel.create([{
+          user_id: userObjectId,
+          is_online: false,
+          is_deleted: false,
+        }], { session });
+
+        user.role = 'shipper';
+        await user.save({ session });
+
+        return shipperDoc;
+      });
+      return shipper;
+    }catch (e) {
+      console.error(`Create shipper failed: ${e.message}`, e.stack);
+      throw e;
+    }finally {
+      session.endSession();
     }
+  }
 
-    const existing = await this.shipperModel.findOne({ user_id: userObjectId });
-    if (existing) {
-      throw new BadRequestException('User is already a shipper');
+  async deleteShipper(userId: string) {
+    const userObjectId = this.ensureObjectId(userId, 'user id');
+    const shipper = await this.shipperModel.findOne({ user_id: userObjectId });
+    if (!shipper) {
+      throw new NotFoundException('Shipper not found');
     }
-
-    const shipper = await this.shipperModel.create({
-      user_id: userObjectId,
-      is_online: false,
-      is_deleted: false,
-    });
-
+    shipper.is_deleted = true;
+    await shipper.save();
     return shipper;
   }
 
@@ -55,6 +88,16 @@ export class ShipperService {
     setOnlineStatusDto: SetOnlineStatusDto,
   ): Promise<Shipper> {
     const userObjectId = this.ensureObjectId(userId, 'user id');
+
+    const shipperExist = await this.shipperModel.findOne({ user_id: userObjectId });
+    if (!shipperExist) {
+      throw new NotFoundException('Shipper not found');
+    }
+
+    const orderOfShipper = await this.orderModel.find({ shipper_id: shipperExist._id, status: { $in: ['assigned', 'shipped'] } });
+    if (orderOfShipper.length > 0) {
+      throw new BadRequestException('Shipper is already assigned to an order. Cannot change online status');
+    }
 
     const location = setOnlineStatusDto.latitude &&
       setOnlineStatusDto.longitude
@@ -74,6 +117,16 @@ export class ShipperService {
       },
       { upsert: true, new: true },
     );
+
+    if ((await this.redis.get(`shipper:${shipper._id}:current`)) === null) {
+      await this.redis.set(`shipper:${shipper._id}:current`, '0');
+    }
+
+    if (setOnlineStatusDto.is_online) {
+      this.assignOrderService.drainQueue();
+    } else {
+      // await this.assignOrderService.requeueAllByAgent(userId);
+    }
 
     return shipper;
   }
@@ -101,20 +154,23 @@ export class ShipperService {
   ): Promise<Order[]> {
     const userObjectId = this.ensureObjectId(userId, 'user id');
 
+    const shipper = await this.shipperModel.findOne({ user_id: userObjectId });
+    if (!shipper) {
+      throw new NotFoundException('Shipper not found');
+    }
+
     const filter: any = {
-      shipper_id: userObjectId,
+      shipper_id: shipper._id,
       is_deleted: false,
     };
 
-    // If status is provided, filter by it
-    // Otherwise, return confirmed and shipped orders (not delivered/cancelled)
     if (status) {
       filter.status = status;
     } else {
-      filter.status = { $in: ['confirmed', 'shipped'] };
+      filter.status = { $in: ['assigned', 'shipped', 'delivered', 'completed'] };
     }
 
-    return await this.orderModel
+    const orders = await this.orderModel
       .find(filter)
       .populate('address_id', 'full_name phone address ward district city')
       .populate(
@@ -122,6 +178,8 @@ export class ShipperService {
         'name slug image_primary images unit_price unit',
       )
       .sort({ created_at: -1 });
+
+    return orders;
   }
 
   async assignOrderToShipper(
@@ -171,9 +229,18 @@ export class ShipperService {
     const orderObjectId = this.ensureObjectId(orderId, 'order id');
     const shipperObjectId = this.ensureObjectId(shipperId, 'shipper id');
 
+    const shipper = await this.shipperModel.findOne({
+      user_id: shipperObjectId,
+      is_deleted: false,
+    });
+
+    if (!shipper) {
+      throw new NotFoundException('Shipper not found');
+    }
+
     const order = await this.orderModel.findOne({
       _id: orderObjectId,
-      shipper_id: shipperObjectId,
+      shipper_id: shipper._id,
       is_deleted: false,
     });
 
@@ -181,7 +248,7 @@ export class ShipperService {
       throw new NotFoundException('Order not found or not assigned to you');
     }
 
-    if (order.status !== 'confirmed') {
+    if (order.status !== 'assigned') {
       throw new BadRequestException(
         `Cannot start delivery for order with status: ${order.status}`,
       );
@@ -207,9 +274,18 @@ export class ShipperService {
     const orderObjectId = this.ensureObjectId(orderId, 'order id');
     const shipperObjectId = this.ensureObjectId(shipperId, 'shipper id');
 
+    const shipper = await this.shipperModel.findOne({
+      user_id: shipperObjectId,
+      is_deleted: false,
+    });
+
+    if (!shipper) {
+      throw new NotFoundException('Shipper not found');
+    }
+
     const order = await this.orderModel.findOne({
       _id: orderObjectId,
-      shipper_id: shipperObjectId,
+      shipper_id: shipper._id,
       is_deleted: false,
     });
 
@@ -233,6 +309,10 @@ export class ShipperService {
       .findById(orderId)
       .populate('address_id')
       .populate('items.product_id', 'name slug image_primary unit_price');
+
+    this.redis.decr(`shipper:${shipper._id}:current`);
+
+    this.assignOrderService.drainQueue();
 
     if (!result) {
       throw new NotFoundException('Order not found after completion');

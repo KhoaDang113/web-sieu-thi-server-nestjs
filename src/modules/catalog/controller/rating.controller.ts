@@ -20,7 +20,7 @@ import { CreateRatingDto } from '../dto/create-rating.dto';
 import { UpdateRatingDto } from '../dto/update-rating.dto';
 import { GetRatingsDto } from '../dto/get-ratings.dto';
 import { AdminGuard } from '../../../common/guards/admin.guard';
-import { Public } from '../../auth/decorators/public.decorator';
+import { Public } from '../../../common/decorators/public.decorator';
 
 @Controller('ratings')
 export class RatingController {

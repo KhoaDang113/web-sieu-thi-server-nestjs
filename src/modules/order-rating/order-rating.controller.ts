@@ -39,11 +39,10 @@ export class OrderRatingController {
     return this.orderRatingService.findOne(id);
   }
 
-   @Get('order/:orderId')
+  @Get('order/:orderId')
   findByOrder(@Param('orderId') orderId: string) {
     return this.orderRatingService.findByOrder(orderId);
   }
-
 
   @Patch(':id')
   @UseInterceptors(FilesInterceptor('images'))

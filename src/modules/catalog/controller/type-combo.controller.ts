@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TypeComboService } from '../service/type-combo.service';
-import { Public } from '../../auth/decorators/public.decorator';
+import { Public } from '../../../common/decorators/public.decorator';
 import { AdminGuard } from '../../../common/guards/admin.guard';
 import { CreateTypeComboDto } from '../dto/create-type-combo.dto';
 import { UpdateTypeComboDto } from '../dto/update-type-combo.dto';

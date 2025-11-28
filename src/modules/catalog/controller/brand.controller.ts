@@ -12,7 +12,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { BrandService } from '../service/brand.service';
-import { Public } from '../../auth/decorators/public.decorator';
+import { Public } from '../../../common/decorators/public.decorator';
 import { AdminGuard } from '../../../common/guards/admin.guard';
 import { CreateBrandDto } from '../dto/create-brand.dto';
 import { UpdateBrandDto } from '../dto/update-brand.dto';

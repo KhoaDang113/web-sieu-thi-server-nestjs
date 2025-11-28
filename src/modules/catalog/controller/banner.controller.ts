@@ -1,4 +1,4 @@
-import { Public } from 'src/modules/auth/decorators/public.decorator';
+import { Public } from 'src/common/decorators/public.decorator';
 import { BannerService } from '../service/banner.service';
 import {
   Controller,

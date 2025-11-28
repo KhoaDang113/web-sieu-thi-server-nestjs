@@ -14,6 +14,7 @@ import { SetOnlineStatusDto } from './dto/set-online-status.dto';
 import { ShipperGuard } from '../../common/guards/shipper.guard';
 import { AdminGuard } from 'src/common/guards/admin.guard';
 import { CreateShipperDto } from './dto/create-shipper-dto.dto';
+import { SkipShipperGuard } from '../../common/decorators/skip-shipper-guard.decorator';
 
 @Controller('shipper')
 @UseGuards(ShipperGuard)
@@ -21,6 +22,7 @@ export class ShipperController {
   constructor(private readonly shipperService: ShipperService) {}
 
   @Post()
+  @SkipShipperGuard()
   @UseGuards(AdminGuard)
   async createForUser(@Request() req: any, @Body() dto: CreateShipperDto) {
     return await this.shipperService.createForUser(dto?.user_id);

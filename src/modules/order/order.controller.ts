@@ -17,12 +17,16 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { StaffGuard } from '../../common/guards/staff.guard';
+import { AssignOrderService } from './assign-order.service';
+import { ShipperGuard } from '../../common/guards/shipper.guard';
+import { ShipperAssignDto } from './dto/shipper-assign.dto';
 
 @Controller('orders')
 export class OrderController {
   constructor(
     private readonly orderService: OrderService,
     @InjectQueue('order-queue') private readonly orderQueue: Queue,
+    private readonly assignOrderService: AssignOrderService,
   ) {}
 
   @Post()
@@ -195,5 +199,12 @@ export class OrderController {
       body.cancel_reason,
       staffId,
     );
+  }
+
+  // Shipper nhận đơn hàng
+  @Post('shipper/:id')
+  @UseGuards(ShipperGuard)
+  async shipperAssignOrder(@Body() body: ShipperAssignDto) {
+    return await this.assignOrderService.shipperAssignOrder(body.orderId, body.shipperId, body.status);
   }
 }

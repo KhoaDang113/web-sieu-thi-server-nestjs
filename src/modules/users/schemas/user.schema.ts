@@ -19,7 +19,7 @@ export class User {
   @Prop({ select: false })
   password?: string;
 
-  @Prop({ enum: ['user', 'staff', 'admin'], default: 'user' })
+  @Prop({ enum: ['user', 'staff', 'admin', 'shipper'], default: 'user' })
   role: string;
 
   @Prop({ type: Date, default: null })

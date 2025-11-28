@@ -136,6 +136,11 @@ export class RealtimeGateway
     this.logger.debug(`Emitted '${event}' to all-shippers`);
   }
 
+  emitToShipper(shipperId: string, event: string, payload: any) {
+    this.io.to(`shipper:${shipperId}`).emit(event, payload);
+    this.logger.debug(`Emitted '${event}' to shipper:${shipperId}`);
+  }
+
   async emitToAllStaffExcept(
     excludeStaffId: string,
     event: string,

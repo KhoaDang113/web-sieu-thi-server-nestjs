@@ -48,3 +48,11 @@ export interface NewOrderPayload {
   message: string;
   order: any;
 }
+
+
+export interface NewOrderToShipperPayload {
+  shipperId: string;
+  orderId: string;
+  message: string;
+  order: any;
+}

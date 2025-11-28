@@ -12,7 +12,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { ComboService } from '../service/combo.service';
-import { Public } from '../../auth/decorators/public.decorator';
+import { Public } from '../../../common/decorators/public.decorator';
 import { AdminGuard } from '../../../common/guards/admin.guard';
 import { CreateComboDto } from '../dto/create-combo.dto';
 import { UpdateComboDto } from '../dto/update-combo.dto';

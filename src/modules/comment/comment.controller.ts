@@ -17,7 +17,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { GetCommentsDto } from './dto/get-comments.dto';
 import { AdminGuard } from '../../common/guards/admin.guard';
-import { Public } from '../auth/decorators/public.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('comments')
 export class CommentController {

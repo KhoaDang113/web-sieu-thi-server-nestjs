@@ -11,6 +11,8 @@ import { OrderProcessor } from './queue/order.processor';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { NotificationModule } from '../notification/notification.module';
 import { User, UserSchema } from '../users/schemas/user.schema';
+import { AssignOrderService } from './assign-order.service';
+import { Shipper, ShipperSchema } from '../shipper/schema/shipper.schema';
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
       { name: Product.name, schema: ProductSchema },
       { name: Address.name, schema: AddressSchema },
       { name: User.name, schema: UserSchema },
+      { name: Shipper.name, schema: ShipperSchema },
     ]),
     BullModule.registerQueue({
       name: 'order-queue',
@@ -28,7 +31,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
     NotificationModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService, OrderProcessor],
-  exports: [OrderService],
+  providers: [OrderService, OrderProcessor, AssignOrderService],
+  exports: [OrderService, AssignOrderService],
 })
 export class OrderModule {}

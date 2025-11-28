@@ -14,6 +14,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { OrderRealtimeService } from '../realtime/order-realtime.service';
 import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
 import { ShipperRealtimeService } from '../realtime/shipper-realtime.service';
+import { AssignOrderService } from './assign-order.service';
 
 @Injectable()
 export class OrderService {
@@ -29,6 +30,7 @@ export class OrderService {
     private readonly orderRealtimeService: OrderRealtimeService,
     private readonly notificationRealtimeService: NotificationRealtimeService,
     private readonly shipperRealtimeService: ShipperRealtimeService,
+    private readonly assignOrderService: AssignOrderService,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -406,12 +408,7 @@ export class OrderService {
       timestamp: new Date(),
     });
 
-    // Thông báo cho các shipper đang online
-    this.shipperRealtimeService.notifyNewOrderToShippers({
-      orderId,
-      message: 'Có đơn hàng mới cần giao',
-      order: result,
-    });
+    this.assignOrderService.sendOrderToShipper(orderId);
 
     return result;
   }

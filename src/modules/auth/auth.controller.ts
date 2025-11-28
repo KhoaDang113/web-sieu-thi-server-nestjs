@@ -17,7 +17,7 @@ import { EmailVerified } from './decorators/email-verified.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import { RegisterPhoneDto, VerifyCodeDto, LoginEmailDto } from './dto/auth.dto';
 import { RegisterEmailDto } from './dto/register-email.dto';
-import { Public } from './decorators/public.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { LoginPhoneDto } from './dto/login-phone.dto';
 import { VerifyLoginSmsDto } from './dto/verify-login-sms.dto';
