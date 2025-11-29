@@ -12,6 +12,8 @@ import { SetOnlineStatusDto } from './dto/set-online-status.dto';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import Redis from 'ioredis';
 import { AssignOrderService } from '../order/assign-order.service';
+import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
+import { OrderRealtimeService } from '../realtime/order-realtime.service';
 
 @Injectable()
 export class ShipperService {
@@ -26,6 +28,8 @@ export class ShipperService {
     @InjectConnection()
     private readonly connection: Connection,
     private readonly assignOrderService: AssignOrderService,
+    private readonly notificationRealtimeService: NotificationRealtimeService,
+    private readonly orderRealtimeService: OrderRealtimeService,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -182,49 +186,6 @@ export class ShipperService {
     return orders;
   }
 
-  async assignOrderToShipper(
-    orderId: string,
-    shipperId: string,
-  ): Promise<Order> {
-    const orderObjectId = this.ensureObjectId(orderId, 'order id');
-    const shipperObjectId = this.ensureObjectId(shipperId, 'shipper id');
-
-    const order = await this.orderModel.findOne({
-      _id: orderObjectId,
-      is_deleted: false,
-    });
-
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    if (order.status !== 'confirmed') {
-      throw new BadRequestException(
-        `Cannot assign order with status: ${order.status}`,
-      );
-    }
-
-    if (order.shipper_id) {
-      throw new BadRequestException('Order already assigned to a shipper');
-    }
-
-    order.shipper_id = shipperObjectId;
-    order.assigned_at = new Date();
-    await order.save();
-
-    const result = await this.orderModel
-      .findById(orderId)
-      .populate('address_id')
-      .populate('items.product_id', 'name slug image_primary unit_price')
-      .populate('shipper_id', 'name phone');
-
-    if (!result) {
-      throw new NotFoundException('Order not found after assignment');
-    }
-
-    return result;
-  }
-
   async startDelivery(orderId: string, shipperId: string): Promise<Order> {
     const orderObjectId = this.ensureObjectId(orderId, 'order id');
     const shipperObjectId = this.ensureObjectId(shipperId, 'shipper id');
@@ -247,13 +208,14 @@ export class ShipperService {
     if (!order) {
       throw new NotFoundException('Order not found or not assigned to you');
     }
-
+    
     if (order.status !== 'assigned') {
       throw new BadRequestException(
         `Cannot start delivery for order with status: ${order.status}`,
       );
     }
-
+    
+    const previousStatus = order.status;
     order.status = 'shipped';
     order.shipped_at = new Date();
     await order.save();
@@ -266,6 +228,35 @@ export class ShipperService {
     if (!result) {
       throw new NotFoundException('Order not found after starting delivery');
     }
+
+    await this.notificationRealtimeService.notifyOrderStatusUpdatedByShipperToStaff( {
+      orderId,
+      previousStatus,
+      newStatus: 'shipped',
+      message: 'Đơn hàng đang được giao',
+      timestamp: new Date(),
+      updatedBy: shipperId,
+      order: result,
+    });
+
+    // Thông báo cho customer
+    const userId = order.user_id.toString();
+    this.notificationRealtimeService.notifyCustomerOrderUpdated(userId, {
+      orderId,
+      previousStatus,
+      newStatus: 'shipped',
+      message: 'Đơn hàng của bạn đang được giao',
+      timestamp: new Date(),
+    });
+
+    this.orderRealtimeService.orderUpdated(userId, {
+      orderId,
+      previousStatus,
+      newStatus: 'shipped',
+      message: 'Đơn hàng của bạn đang được giao',
+      timestamp: new Date(),
+      order: result,
+    });
 
     return result;
   }
@@ -299,6 +290,7 @@ export class ShipperService {
       );
     }
 
+    const previousStatus = order.status;
     order.status = 'delivered';
     order.delivered_at = new Date();
     order.payment_status = 'paid';
@@ -317,6 +309,36 @@ export class ShipperService {
     if (!result) {
       throw new NotFoundException('Order not found after completion');
     }
+
+    // Thông báo cho các staff khác
+    await this.notificationRealtimeService.notifyOrderStatusUpdatedByShipperToStaff({
+      orderId,
+      previousStatus,
+      newStatus: 'delivered',
+      message: 'Đơn hàng đã được giao thành công',
+      timestamp: new Date(),
+      updatedBy: shipperId,
+      order: result,
+    });
+
+    // Thông báo cho customer
+    const userId = order.user_id.toString();
+    this.notificationRealtimeService.notifyCustomerOrderUpdated(userId, {
+      orderId,
+      previousStatus,
+      newStatus: 'delivered',
+      message: 'Đơn hàng của bạn đã được giao thành công',
+      timestamp: new Date(),
+    });
+
+    this.orderRealtimeService.orderUpdated(userId, {
+      orderId,
+      previousStatus,
+      newStatus: 'delivered',
+      message: 'Đơn hàng của bạn đã được giao thành công',
+      timestamp: new Date(),
+      order: result,
+    });
 
     return result;
   }

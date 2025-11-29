@@ -54,6 +54,11 @@ export class NotificationRealtimeService {
     }
   }
 
+  // Thông báo cho tất cả shipper khi có cập nhật trạng thái
+  notifyOrderStatusUpdatedByShipperToStaff(data: OrderStatusUpdatedPayload) {
+    this.rt.emitToAllStaff('shipper:order-updated', data);
+  }
+
   // Thông báo cho customer khi staff cập nhật đơn hàng
   notifyCustomerOrderUpdated(userId: string, data: OrderStatusUpdatedPayload) {
     this.rt.emitToUser(userId, 'order:status-updated', data);

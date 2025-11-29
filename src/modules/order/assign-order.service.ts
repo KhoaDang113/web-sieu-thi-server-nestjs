@@ -6,6 +6,7 @@ import Redis from "ioredis";
 import { withLock } from "src/shared/redis/redis-lock";
 import { Order, OrderDocument } from "../order/schema/order.schema";
 import { OrderRealtimeService } from "../realtime/order-realtime.service";
+import { NotificationRealtimeService } from "../realtime/notification-realtime.service";
 
 @Injectable()
 export class AssignOrderService {
@@ -14,6 +15,7 @@ export class AssignOrderService {
         @Inject('REDIS') private readonly redis: Redis,
         @InjectModel(Order.name) private readonly orderModel: Model<OrderDocument>,
         private readonly gateway: OrderRealtimeService,
+        private readonly notificationRealtimeService: NotificationRealtimeService,
     ) {}
 
     async getOnlineAvailableShippers() {
@@ -102,6 +104,7 @@ export class AssignOrderService {
         // IMPORTANT: Use shipper document _id for Redis key consistency
         await this.redis.incr(`shipper:${shipper._id}:current`);
 
+        const previousStatus = order.status;
         order.shipper_id = new Types.ObjectId(shipper._id as string);
         order.status = 'assigned';
         order.assigned_at = new Date();
@@ -117,6 +120,37 @@ export class AssignOrderService {
             message: 'Đơn hàng đã được gán cho bạn', 
             order: populatedOrder
         });
+
+        // Thông báo cho các staff khác
+        await this.notificationRealtimeService.notifyOrderStatusUpdatedByShipperToStaff({
+        orderId,
+        previousStatus,
+        newStatus: 'assigned',
+        message: 'Tài xế đã nhận hàng, đợi tài xế đi giao',
+        timestamp: new Date(),
+        updatedBy: shipperId,
+        order: populatedOrder,
+        });
+
+        // Thông báo cho customer
+        const userId = order.user_id.toString();
+        this.notificationRealtimeService.notifyCustomerOrderUpdated(userId, {
+        orderId,
+        previousStatus,
+        newStatus: 'assigned',
+        message: 'Tài xế đã nhận hàng, đợi tài xế đi giao',
+        timestamp: new Date(),
+        });
+
+        this.gateway.orderUpdated(userId, {
+            orderId,
+            previousStatus,
+            newStatus: 'assigned',
+            message: 'Tài xế đã nhận hàng, đợi tài xế đi giao',
+            timestamp: new Date(),
+            order: populatedOrder,
+        });
+
 
         return populatedOrder;
     }

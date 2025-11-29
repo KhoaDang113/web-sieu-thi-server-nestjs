@@ -52,12 +52,6 @@ export class ShipperController {
     return await this.shipperService.getShipperOrders(userId, status);
   }
 
-  @Patch('orders/:id/accept')
-  async acceptOrder(@Request() req: any, @Param('id') orderId: string) {
-    const userId = req.user.id;
-    return await this.shipperService.assignOrderToShipper(orderId, userId);
-  }
-
   @Patch('orders/:id/start-delivery')
   async startDelivery(@Request() req: any, @Param('id') orderId: string) {
     const userId = req.user.id;

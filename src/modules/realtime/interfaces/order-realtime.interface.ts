@@ -56,3 +56,12 @@ export interface NewOrderToShipperPayload {
   message: string;
   order: any;
 }
+
+export interface OrderUpdatedPayload {
+  orderId: string;
+  previousStatus: string;
+  newStatus: string;
+  message: string;
+  timestamp: Date;
+  order?: any;
+}

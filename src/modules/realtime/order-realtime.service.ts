@@ -5,7 +5,8 @@ import {
   OrderSuccessPayload,
   OrderErrorPayload,
   NewOrderPayload,
-  NewOrderToShipperPayload,
+  NewOrderToShipperPayload, 
+  OrderUpdatedPayload
 } from './interfaces/order-realtime.interface';
 
 @Injectable()
@@ -23,6 +24,10 @@ export class OrderRealtimeService {
 
   orderError(userId: string, data: OrderErrorPayload) {
     this.rt.emitToUser(userId, 'order:error', data);
+  }
+
+  orderUpdated(userId: string, data: OrderUpdatedPayload) {
+    this.rt.emitToUser(userId, 'order:updated', data);
   }
 
   newOrderToStaff(data: NewOrderPayload) {
