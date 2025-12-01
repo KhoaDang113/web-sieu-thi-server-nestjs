@@ -55,6 +55,12 @@ export class Order {
   @Prop()
   shipping_fee: number;
 
+  @Prop({ type: Number, default: null })
+  delivery_distance?: number; // in kilometers
+
+  @Prop({ type: Date, default: null })
+  estimated_delivery_time?: Date;
+
   @Prop()
   total: number;
 

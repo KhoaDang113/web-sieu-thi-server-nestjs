@@ -302,7 +302,9 @@ export class ShipperService {
       .populate('address_id')
       .populate('items.product_id', 'name slug image_primary unit_price');
 
-    this.redis.decr(`shipper:${shipper._id}:current`);
+    if ((await this.redis.get(`shipper:${shipper._id}:current`)) !== null || (await this.redis.get(`shipper:${shipper._id}:current`)) !== '0') {
+      await this.redis.decr(`shipper:${shipper._id}:current`);
+    }
 
     this.assignOrderService.drainQueue();
 

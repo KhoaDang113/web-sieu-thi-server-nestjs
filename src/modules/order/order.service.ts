@@ -15,6 +15,7 @@ import { OrderRealtimeService } from '../realtime/order-realtime.service';
 import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
 import { ShipperRealtimeService } from '../realtime/shipper-realtime.service';
 import { AssignOrderService } from './assign-order.service';
+import { DistanceCalculationService } from '../distance/distance-calculation.service';
 
 @Injectable()
 export class OrderService {
@@ -31,6 +32,7 @@ export class OrderService {
     private readonly notificationRealtimeService: NotificationRealtimeService,
     private readonly shipperRealtimeService: ShipperRealtimeService,
     private readonly assignOrderService: AssignOrderService,
+    private readonly distanceCalculationService: DistanceCalculationService,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -139,7 +141,15 @@ export class OrderService {
       0,
     );
     const discount = createOrderDto.discount || 0;
-    const shippingFee = createOrderDto.shipping_fee || 0;
+
+    const fullAddress = `${address.address}, ${address.ward}, ${address.district}, ${address.city}`;
+    const distanceResult =
+      await this.distanceCalculationService.calculateDistanceAndFee(
+        fullAddress,
+        subtotal - discount,
+      );
+
+    const shippingFee = distanceResult.shippingFee;
     const total = subtotal - discount + shippingFee;
 
     if (total < 0) {
@@ -164,6 +174,8 @@ export class OrderService {
         subtotal: Math.round(subtotal),
         discount: Math.round(discount),
         shipping_fee: Math.round(shippingFee),
+        delivery_distance: distanceResult.distance,
+        estimated_delivery_time: distanceResult.estimatedDeliveryTime,
         total: Math.round(total),
         status: 'pending',
         payment_status: 'pending',

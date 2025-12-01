@@ -13,6 +13,7 @@ import { NotificationModule } from '../notification/notification.module';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { AssignOrderService } from './assign-order.service';
 import { Shipper, ShipperSchema } from '../shipper/schema/shipper.schema';
+import { DistanceModule } from '../distance/distance.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { Shipper, ShipperSchema } from '../shipper/schema/shipper.schema';
     InventoryModule,
     RealtimeModule,
     NotificationModule,
+    DistanceModule,
   ],
   controllers: [OrderController],
   providers: [OrderService, OrderProcessor, AssignOrderService],

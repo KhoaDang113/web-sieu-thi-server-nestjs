@@ -205,6 +205,10 @@ export class OrderController {
   @Post('shipper/:id')
   @UseGuards(ShipperGuard)
   async shipperAssignOrder(@Body() body: ShipperAssignDto) {
-    return await this.assignOrderService.shipperAssignOrder(body.orderId, body.shipperId, body.status);
+    return await this.assignOrderService.shipperAssignOrder(
+      body.orderId,
+      body.shipperId,
+      body.status,
+    );
   }
 }

@@ -57,11 +57,6 @@ export class CreateOrderDto {
   discount?: number;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  shipping_fee?: number;
-
-  @IsOptional()
   @IsBoolean()
   is_company_invoice?: boolean;
 

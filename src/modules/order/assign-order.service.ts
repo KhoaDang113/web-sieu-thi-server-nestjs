@@ -61,11 +61,9 @@ export class AssignOrderService {
             const order = await this.orderModel.findById(orderId)
                 .populate('address_id', 'full_name phone address ward district city')
                 .populate('items.product_id', 'name slug image_primary unit_price');
-                
-            if (!order || order.status !== 'confirmed') return order;
-
-            const shipper = await this.pickShipper(excludeShipperId);
             
+            if (!order || order.status !== 'confirmed') return order;
+            const shipper = await this.pickShipper(excludeShipperId);
             if (!shipper) {
                 const key = `order-shipper:${orderId}:queued`;
 
