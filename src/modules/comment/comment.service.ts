@@ -393,4 +393,197 @@ export class CommentService {
       },
     };
   }
+
+  async getAllCommentsAdmin(page = 1, limit = 10, productId?: string, search?: string) {
+    const skip = (page - 1) * limit;
+
+
+    const query: Record<string, any> = {
+      is_deleted: false,
+      parent_id: null, 
+    };
+
+
+    if (productId && Types.ObjectId.isValid(productId)) {
+      query.product_id = new Types.ObjectId(productId);
+    }
+
+
+    if (search) {
+      query.content = { $regex: search, $options: 'i' };
+    }
+
+
+    const [comments, total] = await Promise.all([
+      this.commentModel
+        .find(query)
+        .populate('user_id', 'name avatar email role')
+        .populate('product_id', 'name slug image_primary')
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select(
+          '_id product_id user_id content parent_id reply_count created_at updated_at',
+        )
+        .lean(),
+      this.commentModel.countDocuments(query),
+    ]);
+
+
+    return {
+      comments,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+
+  async getCommentsByProductAdmin() {
+    const productsWithComments = await this.commentModel.aggregate([
+      {
+        $match: {
+          is_deleted: false,
+          parent_id: null,
+        },
+      },
+      {
+        $group: {
+          _id: '$product_id',
+          commentCount: { $sum: 1 },
+          latestComment: { $max: '$created_at' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      {
+        $unwind: '$product',
+      },
+      {
+        $project: {
+          _id: 1,
+          commentCount: 1,
+          latestComment: 1,
+          'product._id': 1,
+          'product.name': 1,
+          'product.slug': 1,
+          'product.image_primary': 1,
+        },
+      },
+      {
+        $sort: { latestComment: -1 },
+      },
+    ]);
+
+
+    return {
+      products: productsWithComments,
+      total: productsWithComments.length,
+    };
+  }
+
+
+  async adminReplyComment(commentId: string, userId: string, dto: CreateCommentDto) {
+    if (!Types.ObjectId.isValid(commentId)) {
+      throw new BadRequestException('commentId is invalid');
+    }
+
+    const parentComment = await this.commentModel
+      .findOne({
+        _id: new Types.ObjectId(commentId),
+        is_deleted: false,
+      })
+      .populate('user_id', 'name avatar email role')
+      .populate('product_id', 'name slug')
+      .lean();
+
+    if (!parentComment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    const replyDto: CreateCommentDto = {
+      product_id: (parentComment.product_id as any)._id.toString(),
+      content: dto.content,
+      parent_id: commentId,
+    };
+
+
+    return this.createComment(userId, replyDto);
+  }
+
+
+  async getProductsWithCommentsByCategory(categorySlug: string) {
+    const productsWithComments = await this.commentModel.aggregate([
+      {
+        $match: {
+          is_deleted: false,
+          parent_id: null,
+        },
+      },
+      {
+        $group: {
+          _id: '$product_id',
+          commentCount: { $sum: 1 },
+          latestComment: { $max: '$created_at' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      {
+        $unwind: '$product',
+      },
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'product.category_id',
+          foreignField: '_id',
+          as: 'category',
+        },
+      },
+      {
+        $unwind: '$category',
+      },
+      {
+        $match: {
+          'category.slug': categorySlug,
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          commentCount: 1,
+          latestComment: 1,
+          'product._id': 1,
+          'product.name': 1,
+          'product.slug': 1,
+          'product.image_primary': 1,
+        },
+      },
+      {
+        $sort: { latestComment: -1 },
+      },
+    ]);
+
+
+    return {
+      products: productsWithComments,
+      total: productsWithComments.length,
+    };
+  }
+
 }

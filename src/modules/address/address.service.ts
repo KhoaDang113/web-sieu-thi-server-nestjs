@@ -29,7 +29,7 @@ export class AddressService {
     return this.addressModel
       .find({ user_id: userObjectId, is_active: true })
       .select(
-        'full_name phone address ward district city zip_code is_default is_active user_id',
+        'full_name phone address ward district city zip_code latitude longitude is_default is_active user_id',
       )
       .exec();
   }

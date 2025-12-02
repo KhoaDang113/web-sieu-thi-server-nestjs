@@ -142,9 +142,9 @@ export class OrderService {
     );
     const discount = createOrderDto.discount || 0;
 
-    const fullAddress = `${address.address}, ${address.ward}, ${address.district}, ${address.city}`;
+    const fullAddress = `${address.latitude},${address.longitude}`;
     const distanceResult =
-      await this.distanceCalculationService.calculateDistanceAndFee(
+      await this.distanceCalculationService.calculateDistanceAndFeeByAPINextbillion(
         fullAddress,
         subtotal - discount,
       );

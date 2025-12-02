@@ -8,11 +8,26 @@ export class ShippingController {
     private readonly distanceCalculationService: DistanceCalculationService,
   ) {}
 
+  // @Post('calculate-fee')
+  // async calculateShippingFee(@Body() dto: CalculateShippingFeeDto) {
+  //   return await this.distanceCalculationService.calculateDistanceAndFeeFromAddressId(
+  //     dto.addressId,
+  //     dto.orderTotal,
+  //   );
+  // }
+  
   @Post('calculate-fee')
   async calculateShippingFee(@Body() dto: CalculateShippingFeeDto) {
-    return await this.distanceCalculationService.calculateDistanceAndFeeFromAddressId(
-      dto.addressId,
+    return await this.distanceCalculationService.calculateDistanceAndFeeByAPINextbillion(
+      dto.userAddress,
       dto.orderTotal,
+    );
+  }
+
+  @Post('calculate-fee-by-address')
+  async testchoi() {
+    return await this.distanceCalculationService.getDistanceAndDuration(
+     "10.847007540739863, 106.72896152040121",
     );
   }
 }

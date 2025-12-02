@@ -26,6 +26,12 @@ export class Address {
   @Prop({ required: true })
   city: string;
 
+  @Prop({ type: Number })
+  latitude?: number;
+
+  @Prop({ type: Number })
+  longitude?: number;
+
   @Prop()
   zip_code?: string;
 
@@ -36,7 +42,7 @@ export class Address {
   is_active: boolean;
 
   @Prop({ default: false })
-  is_deleted: false;
+  is_deleted: boolean;
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);

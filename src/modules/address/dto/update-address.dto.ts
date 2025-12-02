@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Min, Max, IsNumber } from 'class-validator';
 
 export class UpdateAddressDto {
   @IsOptional()
@@ -24,6 +24,20 @@ export class UpdateAddressDto {
   @IsOptional()
   @IsString()
   city?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
+
 
   @IsOptional()
   @IsString()
