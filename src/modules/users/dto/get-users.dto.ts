@@ -15,7 +15,7 @@ export class GetUsersDto {
   limit?: number = 10;
 
   @IsOptional()
-  @IsEnum(['user', 'admin'])
+  @IsEnum(['user','staff', 'shipper', 'admin'])
   role?: string;
 
   @IsOptional()

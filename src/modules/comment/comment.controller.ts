@@ -98,4 +98,46 @@ export class CommentController {
     }
     return this.commentService.deleteComment(id, userId, true);
   }
+
+  @UseGuards(AdminGuard)
+  @Get('admin/all')
+  async getAllCommentsAdmin(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('product_id') productId?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.commentService.getAllCommentsAdmin(page, limit, productId, search);
+  }
+
+
+  @UseGuards(AdminGuard)
+  @Get('admin/by-product')
+  async getCommentsByProductAdmin() {
+    return this.commentService.getCommentsByProductAdmin();
+  }
+
+
+  @UseGuards(AdminGuard)
+  @Get('admin/products-by-category/:categorySlug')
+  async getProductsWithCommentsByCategory(
+    @Param('categorySlug') categorySlug: string,
+  ) {
+    return this.commentService.getProductsWithCommentsByCategory(categorySlug);
+  }
+
+
+  @UseGuards(AdminGuard)
+  @Post('admin/reply/:id')
+  async adminReplyComment(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Body() dto: CreateCommentDto,
+  ) {
+    const userId = req.user?.id as string;
+    if (!userId) {
+      throw new UnauthorizedException('User not found');
+    }
+    return this.commentService.adminReplyComment(id, userId, dto);
+  }
 }

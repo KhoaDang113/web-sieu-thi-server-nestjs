@@ -22,7 +22,7 @@ export class UpdateUserByAdminDto {
   gender?: string;
 
   @IsOptional()
-  @IsEnum(['user', 'admin'])
+  @IsEnum(['user','staff', 'shipper', 'admin'])
   role?: string;
 
   @IsOptional()

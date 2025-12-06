@@ -31,8 +31,10 @@ export class ProductService {
       .skip(skip)
       .limit(limit)
       .select(
-        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active quantity',
+        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active quantity category_id brand_id updated_at',
       )
+      .populate('category_id', 'name slug')
+      .populate('brand_id', 'name slug')
       .lean();
 
     return {
@@ -177,6 +179,115 @@ export class ProductService {
       brands
     };
   }
+
+  async getCategoryProducts(
+    categorySlug: string,
+    skip: number,
+    brand?: string,
+    sortOrder?: string,
+  ): Promise<any> {
+    const actualLimit: number = skip === 0 ? 40 : 10;
+
+    const category = await this.categoryModel.findOne({ 
+      slug: categorySlug,
+      is_active: true,
+      is_deleted: false
+    }).lean();
+    
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    const subCategories = await this.categoryModel
+      .find({ 
+        parent_id: category._id,
+        is_active: true,
+        is_deleted: false
+      })
+      .select('_id')
+      .lean();
+
+    const categoryIds = [category._id, ...subCategories.map((sub) => sub._id)];
+
+    const filters: Record<string, any> = {
+      is_deleted: false,
+      is_active: true,
+      category_id: { $in: categoryIds }
+    };
+
+    const allProductsInCategory = await this.productModel
+      .find(filters)
+      .select('brand_id')
+      .lean();
+
+    const brandIds = [...new Set(
+      allProductsInCategory
+        .map(p => p.brand_id?.toString())
+        .filter(Boolean)
+    )];
+
+    const brands = await this.brandModel.find({
+      _id: { $in: brandIds },
+      is_active: true,
+      is_deleted: false
+    }).select('_id name slug image').lean();
+
+    if (brand) {
+      const brandSlugs = brand.split(' ').filter((slug) => slug.trim());
+      const brandExists = await this.brandModel.find({
+        slug: { $in: brandSlugs },
+        is_active: true,
+        is_deleted: false
+      });
+      
+      if (!brandExists || brandExists.length === 0) {
+        throw new NotFoundException('Brand not found');
+      }
+      
+      filters.brand_id = { $in: brandExists.map((b) => b._id) };
+    }
+
+    let sortCriteria: Record<string, any> = {};
+    if (sortOrder) {
+      switch (sortOrder?.toLowerCase()) {
+        case 'price-asc':
+          sortCriteria = { final_price: 1 };
+          break;
+        case 'price-desc':
+          sortCriteria = { final_price: -1 };
+          break;
+        case 'hot':
+          sortCriteria = { discount_percent: -1 };
+          break;
+        case 'new':
+          sortCriteria = { created_at: -1 };
+          break;
+        default:
+          sortCriteria = { created_at: -1 };
+      }
+    } else {
+      sortCriteria = { created_at: -1 };
+    }
+
+    const products = await this.productModel
+      .find(filters)
+      .select(
+        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id quantity brand_id'
+      )
+      .sort(sortCriteria)
+      .lean();
+
+    const paginatedProducts = products.slice(skip, skip + actualLimit);
+
+    return {
+      total: paginatedProducts.length,
+      skip,
+      actualLimit,
+      products: paginatedProducts,
+      brands
+    };
+  }
+
   async getProductsByCategorySlugOrAll(
     categorySlug?: string,
   ): Promise<Product[]> {

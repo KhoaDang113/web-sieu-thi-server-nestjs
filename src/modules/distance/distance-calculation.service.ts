@@ -93,7 +93,6 @@ export class DistanceCalculationService {
 
       
   //     const text = response.text?.trim();
-  //     console.log(text);
       
   //     let jsonText = text;
   //     const jsonMatch = text?.match(/\{[\s\S]*\}/);
@@ -142,7 +141,6 @@ export class DistanceCalculationService {
     var url = "https://api.nextbillion.io/distancematrix/json?origins=" + this.storeLocation + "&destinations=" + destination + "&mode=4w&key=" + this.apiKeyNextbillion;
     const response = await fetch(url);
     const data = await response.json();
-    console.log("data:", data);
     let distance = 0;
     let duration = 0;
     data.rows.forEach((row: any) => {

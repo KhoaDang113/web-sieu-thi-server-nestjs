@@ -19,6 +19,7 @@ import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { AdminGuard } from '../../../common/guards/admin.guard';
 import { SearchProductsDto } from '../dto/search-products.dto';
+import { GetCategoryProductsDto } from '../dto/get-category-products.dto';
 
 @Controller('products')
 export class ProductController {
@@ -41,6 +42,18 @@ export class ProductController {
       dto.key,
       skip,
       dto.category,
+      dto.brand,
+      dto.sortOrder,
+    );
+  }
+
+  @Public()
+  @Get('category')
+  async getCategoryProducts(@Query() dto: GetCategoryProductsDto): Promise<any> {
+    const skip = dto.skip ?? 0;
+    return await this.productService.getCategoryProducts(
+      dto.category,
+      skip,
       dto.brand,
       dto.sortOrder,
     );
