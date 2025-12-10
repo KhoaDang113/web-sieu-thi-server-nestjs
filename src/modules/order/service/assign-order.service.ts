@@ -1,12 +1,12 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
-import { Shipper, ShipperDocument } from "../shipper/schema/shipper.schema";
+import { Shipper, ShipperDocument } from "../../shipper/schema/shipper.schema";
 import Redis from "ioredis";
 import { withLock } from "src/shared/redis/redis-lock";
-import { Order, OrderDocument } from "../order/schema/order.schema";
-import { OrderRealtimeService } from "../realtime/order-realtime.service";
-import { NotificationRealtimeService } from "../realtime/notification-realtime.service";
+import { Order, OrderDocument } from "../schema/order.schema";
+import { OrderRealtimeService } from "../../realtime/order-realtime.service";
+import { NotificationRealtimeService } from "../../realtime/notification-realtime.service";
 
 @Injectable()
 export class AssignOrderService {

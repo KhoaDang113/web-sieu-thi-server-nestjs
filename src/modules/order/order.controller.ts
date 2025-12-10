@@ -12,14 +12,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { OrderService } from './order.service';
+import { OrderService } from './service/order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { StaffGuard } from '../../common/guards/staff.guard';
-import { AssignOrderService } from './assign-order.service';
+import { AssignOrderService } from './service/assign-order.service';
 import { ShipperGuard } from '../../common/guards/shipper.guard';
 import { ShipperAssignDto } from './dto/shipper-assign.dto';
+import { StatsService } from './service/stats.service';
 
 @Controller('orders')
 export class OrderController {
@@ -27,6 +28,7 @@ export class OrderController {
     private readonly orderService: OrderService,
     @InjectQueue('order-queue') private readonly orderQueue: Queue,
     private readonly assignOrderService: AssignOrderService,
+    private readonly statsService: StatsService,
   ) {}
 
   @Post()
@@ -210,5 +212,11 @@ export class OrderController {
       body.shipperId,
       body.status,
     );
+  }
+
+  @Get('admin/dashboard')
+  @UseGuards(StaffGuard)
+  async getDashboardStats() {
+    return await this.statsService.getDashboardStats();
   }
 }

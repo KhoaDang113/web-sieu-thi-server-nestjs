@@ -6,16 +6,16 @@ import {
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Model, Types, Connection } from 'mongoose';
-import { Order, OrderDocument } from './schema/order.schema';
-import { Product, ProductDocument } from '../catalog/schema/product.schema';
-import { Address, AddressDocument } from '../address/schema/address.schema';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { InventoryService } from '../inventory/inventory.service';
-import { OrderRealtimeService } from '../realtime/order-realtime.service';
-import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
-import { ShipperRealtimeService } from '../realtime/shipper-realtime.service';
+import { Order, OrderDocument } from '../schema/order.schema';
+import { Product, ProductDocument } from '../../catalog/schema/product.schema';
+import { Address, AddressDocument } from '../../address/schema/address.schema';
+import { CreateOrderDto } from '../dto/create-order.dto';
+import { InventoryService } from '../../inventory/inventory.service';
+import { OrderRealtimeService } from '../../realtime/order-realtime.service';
+import { NotificationRealtimeService } from '../../realtime/notification-realtime.service';
+import { ShipperRealtimeService } from '../../realtime/shipper-realtime.service';
 import { AssignOrderService } from './assign-order.service';
-import { DistanceCalculationService } from '../distance/distance-calculation.service';
+import { DistanceCalculationService } from '../../distance/distance-calculation.service';
 
 @Injectable()
 export class OrderService {

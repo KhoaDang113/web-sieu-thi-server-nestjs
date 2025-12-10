@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { OrderService } from '../order.service';
+import { OrderService } from '../service/order.service';
 import { CreateOrderDto } from '../dto/create-order.dto';
 import { Types, Document, Model } from 'mongoose';
 import { OrderRealtimeService } from 'src/modules/realtime/order-realtime.service';

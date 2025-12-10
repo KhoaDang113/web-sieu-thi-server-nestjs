@@ -11,7 +11,7 @@ import { Order, OrderDocument } from '../order/schema/order.schema';
 import { SetOnlineStatusDto } from './dto/set-online-status.dto';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import Redis from 'ioredis';
-import { AssignOrderService } from '../order/assign-order.service';
+import { AssignOrderService } from '../order/service/assign-order.service';
 import { NotificationRealtimeService } from '../realtime/notification-realtime.service';
 import { OrderRealtimeService } from '../realtime/order-realtime.service';
 

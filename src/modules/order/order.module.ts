@@ -1,7 +1,7 @@
 import { MongooseModule } from '@nestjs/mongoose';
 import { Order, OrderSchema } from './schema/order.schema';
 import { OrderController } from './order.controller';
-import { OrderService } from './order.service';
+import { OrderService } from './service/order.service';
 import { Module } from '@nestjs/common';
 import { Product, ProductSchema } from '../catalog/schema/product.schema';
 import { Address, AddressSchema } from '../address/schema/address.schema';
@@ -11,9 +11,10 @@ import { OrderProcessor } from './queue/order.processor';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { NotificationModule } from '../notification/notification.module';
 import { User, UserSchema } from '../users/schemas/user.schema';
-import { AssignOrderService } from './assign-order.service';
+import { AssignOrderService } from './service/assign-order.service';
 import { Shipper, ShipperSchema } from '../shipper/schema/shipper.schema';
 import { DistanceModule } from '../distance/distance.module';
+import { StatsService } from './service/stats.service';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { DistanceModule } from '../distance/distance.module';
     DistanceModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService, OrderProcessor, AssignOrderService],
-  exports: [OrderService, AssignOrderService],
+  providers: [OrderService, OrderProcessor, AssignOrderService, StatsService],
+  exports: [OrderService, AssignOrderService, StatsService],
 })
 export class OrderModule {}
