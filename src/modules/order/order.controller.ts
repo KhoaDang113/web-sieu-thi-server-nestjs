@@ -150,6 +150,12 @@ export class OrderController {
     );
   }
 
+  @Get('admin/dashboard')
+  @UseGuards(StaffGuard)
+  async getDashboardStats() {
+    return await this.statsService.getDashboardStats();
+  }
+
   // Staff lấy chi tiết đơn hàng
   @Get('admin/:id')
   @UseGuards(StaffGuard)
@@ -212,11 +218,5 @@ export class OrderController {
       body.shipperId,
       body.status,
     );
-  }
-
-  @Get('admin/dashboard')
-  @UseGuards(StaffGuard)
-  async getDashboardStats() {
-    return await this.statsService.getDashboardStats();
   }
 }

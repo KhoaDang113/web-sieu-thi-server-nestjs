@@ -49,7 +49,8 @@ export class StatsService {
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
     sevenDaysAgo.setHours(0, 0, 0, 0);
-
+    console.log("123");
+    
 
     // Run all queries in parallel
     const [
@@ -175,7 +176,6 @@ export class StatsService {
         .limit(5)
         .lean(),
     ]);
-
 
     // Format weekly revenue with all 7 days
     const weeklyRevenue: Array<{ date: string; revenue: number; orders: number }> = [];
