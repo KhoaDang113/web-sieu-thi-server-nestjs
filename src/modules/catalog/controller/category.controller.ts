@@ -44,6 +44,16 @@ export class CategoryController {
     return this.categoryService.findRootCategories();
   }
 
+  @UseGuards(AdminGuard)
+  @Get('check-slug')
+  async checkSlug(
+    @Query('slug') slug: string,
+    @Query('excludeId') excludeId?: string,
+  ) {
+    const exists = await this.categoryService.checkSlugExists(slug, excludeId);
+    return { exists };
+  }
+
   @Public()
   @Get(':id')
   async getCategoryById(@Param('id') id: string) {
@@ -87,5 +97,17 @@ export class CategoryController {
   @UseGuards(AdminGuard)
   async deleteCategory(@Param('id') id: string) {
     return this.categoryService.delete(id);
+  }
+
+  @Get(':id/product-count')
+  @UseGuards(AdminGuard)
+  async getProductCount(@Param('id') id: string) {
+    return this.categoryService.getProductCount(id);
+  }
+
+  @Delete(':id/with-products')
+  @UseGuards(AdminGuard)
+  async deleteCategoryWithProducts(@Param('id') id: string) {
+    return this.categoryService.deleteWithProducts(id);
   }
 }

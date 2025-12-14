@@ -6,6 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from '../schema/category.schema';
+import { Product, ProductDocument } from '../schema/product.schema';
 import { CreateCategoryDto } from '../dto/create-category.dto';
 import { UpdateCategoryDto } from '../dto/update-category.dto';
 import { CloudinaryService } from 'src/shared/cloudinary/cloudinary.service';
@@ -15,6 +16,8 @@ export class CategoryService {
   constructor(
     @InjectModel(Category.name)
     private categoryModel: Model<CategoryDocument>,
+    @InjectModel(Product.name)
+    private productModel: Model<ProductDocument>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
@@ -93,6 +96,20 @@ export class CategoryService {
         is_deleted: false,
       })
       .exec();
+  }
+
+  async checkSlugExists(slug: string, excludeId?: string): Promise<boolean> {
+    const query: Record<string, any> = {
+      slug,
+      is_deleted: false,
+    };
+
+    if (excludeId && Types.ObjectId.isValid(excludeId)) {
+      query._id = { $ne: new Types.ObjectId(excludeId) };
+    }
+
+    const existing = await this.categoryModel.findOne(query).lean();
+    return !!existing;
   }
 
   async create(
@@ -265,6 +282,64 @@ export class CategoryService {
     }
 
     return { message: 'Category deleted successfully' };
+  }
+  
+  /**
+   * Đếm số sản phẩm trong danh mục
+   */
+  async getProductCount(id: string): Promise<{ count: number }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid category ID');
+    }
+
+    const count = await this.productModel.countDocuments({
+      category_id: new Types.ObjectId(id),
+      is_deleted: false,
+    });
+
+    return { count };
+  }
+
+  /**
+   * Xóa danh mục và tất cả sản phẩm trong đó
+   */
+  async deleteWithProducts(id: string): Promise<{ message: string; deletedProductsCount: number }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid category ID');
+    }
+
+    const hasChildren = await this.categoryModel
+      .findOne({ parent_id: id, is_deleted: false })
+      .exec();
+    if (hasChildren) {
+      throw new BadRequestException(
+        'Không thể xóa danh mục có danh mục con. Vui lòng xóa danh mục con trước.',
+      );
+    }
+
+    // Đếm và xóa (soft delete) tất cả sản phẩm trong danh mục
+    const productResult = await this.productModel.updateMany(
+      { category_id: new Types.ObjectId(id), is_deleted: false },
+      { $set: { is_deleted: true, is_active: false } },
+    );
+
+    // Xóa (soft delete) danh mục
+    const result = await this.categoryModel
+      .findByIdAndUpdate(
+        id,
+        { $set: { is_deleted: true, is_active: false } },
+        { new: true },
+      )
+      .exec();
+
+    if (!result) {
+      throw new NotFoundException('Không tìm thấy danh mục');
+    }
+
+    return {
+      message: 'Xóa danh mục và sản phẩm thành công',
+      deletedProductsCount: productResult.modifiedCount,
+    };
   }
 
   async getCategoriesAdmin(

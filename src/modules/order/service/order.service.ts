@@ -107,10 +107,10 @@ export class OrderService {
       const errorMessage = insufficientStockItems
         .map(
           (item) =>
-            `${item.name}: Available ${item.available}, Requested ${item.requested}`,
+            `${item.name}: Có sẵn ${item.available}, Yêu cầu ${item.requested}`,
         )
         .join('; ');
-      throw new ConflictException(`Insufficient stock: ${errorMessage}`);
+      throw new ConflictException(`Số lượng tồn kho không đủ: ${errorMessage}`);
     }
 
     const orderItems = createOrderDto.items.map((item) => {

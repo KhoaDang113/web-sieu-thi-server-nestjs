@@ -59,26 +59,45 @@ export class ProductService {
     let brands;
     if (key) {
       filters.$text = { $search: key };
-      
-      const productsForCategories  = await this.productModel.find(filters).select("name category_id brand_id").lean();
-      
-      const finalProductsForCategories = productsForCategories.filter(p => new RegExp(key, 'i').test(p.name))
 
-      const brandIds = [...new Set(finalProductsForCategories.map(p => p.brand_id?.toString()))];
+      const productsForCategories = await this.productModel
+        .find(filters)
+        .select('name category_id brand_id')
+        .lean();
 
-      const categoryIds = [...new Set(finalProductsForCategories.map(p => p.category_id.toString()))];
+      const finalProductsForCategories = productsForCategories.filter((p) =>
+        new RegExp(key, 'i').test(p.name),
+      );
 
-      brands = await this.brandModel.find({ 
-        _id: { $in: brandIds },
-        is_active: true,
-        is_deleted: false
-      }).select("_id name slug image").lean();
+      const brandIds = [
+        ...new Set(
+          finalProductsForCategories.map((p) => p.brand_id?.toString()),
+        ),
+      ];
 
-      categories = await this.categoryModel.find({ 
-        _id: { $in: categoryIds },
-        is_active: true,
-        is_deleted: false
-      }).select("_id name slug description image").lean();
+      const categoryIds = [
+        ...new Set(
+          finalProductsForCategories.map((p) => p.category_id.toString()),
+        ),
+      ];
+
+      brands = await this.brandModel
+        .find({
+          _id: { $in: brandIds },
+          is_active: true,
+          is_deleted: false,
+        })
+        .select('_id name slug image')
+        .lean();
+
+      categories = await this.categoryModel
+        .find({
+          _id: { $in: categoryIds },
+          is_active: true,
+          is_deleted: false,
+        })
+        .select('_id name slug description image')
+        .lean();
     }
     if (category) {
       const categorySlugs = category.split(' ').filter((slug) => slug.trim());
@@ -136,7 +155,7 @@ export class ProductService {
     }
 
     const query = this.productModel.find(filters);
-    
+
     if (useTextScore) {
       query
         .select({
@@ -164,8 +183,8 @@ export class ProductService {
 
     const products = await query.lean();
     // thêm này để lọc theo tiếng chuẩn hơn xíu (trick lỏad)
-    const filteredProducts = key 
-      ? products.filter(p => new RegExp(key, 'i').test(p.name))
+    const filteredProducts = key
+      ? products.filter((p) => new RegExp(key, 'i').test(p.name))
       : products;
 
     const paginatedProducts = filteredProducts.slice(skip, skip + actualLimit);
@@ -176,7 +195,7 @@ export class ProductService {
       actualLimit,
       products: paginatedProducts,
       categories,
-      brands
+      brands,
     };
   }
 
@@ -188,21 +207,23 @@ export class ProductService {
   ): Promise<any> {
     const actualLimit: number = skip === 0 ? 40 : 10;
 
-    const category = await this.categoryModel.findOne({ 
-      slug: categorySlug,
-      is_active: true,
-      is_deleted: false
-    }).lean();
-    
+    const category = await this.categoryModel
+      .findOne({
+        slug: categorySlug,
+        is_active: true,
+        is_deleted: false,
+      })
+      .lean();
+
     if (!category) {
       throw new NotFoundException('Category not found');
     }
 
     const subCategories = await this.categoryModel
-      .find({ 
+      .find({
         parent_id: category._id,
         is_active: true,
-        is_deleted: false
+        is_deleted: false,
       })
       .select('_id')
       .lean();
@@ -212,7 +233,7 @@ export class ProductService {
     const filters: Record<string, any> = {
       is_deleted: false,
       is_active: true,
-      category_id: { $in: categoryIds }
+      category_id: { $in: categoryIds },
     };
 
     const allProductsInCategory = await this.productModel
@@ -220,30 +241,35 @@ export class ProductService {
       .select('brand_id')
       .lean();
 
-    const brandIds = [...new Set(
-      allProductsInCategory
-        .map(p => p.brand_id?.toString())
-        .filter(Boolean)
-    )];
+    const brandIds = [
+      ...new Set(
+        allProductsInCategory
+          .map((p) => p.brand_id?.toString())
+          .filter(Boolean),
+      ),
+    ];
 
-    const brands = await this.brandModel.find({
-      _id: { $in: brandIds },
-      is_active: true,
-      is_deleted: false
-    }).select('_id name slug image').lean();
+    const brands = await this.brandModel
+      .find({
+        _id: { $in: brandIds },
+        is_active: true,
+        is_deleted: false,
+      })
+      .select('_id name slug image')
+      .lean();
 
     if (brand) {
       const brandSlugs = brand.split(' ').filter((slug) => slug.trim());
       const brandExists = await this.brandModel.find({
         slug: { $in: brandSlugs },
         is_active: true,
-        is_deleted: false
+        is_deleted: false,
       });
-      
+
       if (!brandExists || brandExists.length === 0) {
         throw new NotFoundException('Brand not found');
       }
-      
+
       filters.brand_id = { $in: brandExists.map((b) => b._id) };
     }
 
@@ -272,7 +298,7 @@ export class ProductService {
     const products = await this.productModel
       .find(filters)
       .select(
-        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id quantity brand_id'
+        '_id name unit unit_price image_primary discount_percent final_price stock_status is_active category_id quantity brand_id',
       )
       .sort(sortCriteria)
       .lean();
@@ -284,7 +310,7 @@ export class ProductService {
       skip,
       actualLimit,
       products: paginatedProducts,
-      brands
+      brands,
     };
   }
 

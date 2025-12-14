@@ -116,7 +116,7 @@ export class InventoryService {
 
     if (quantityBefore < quantity) {
       throw new BadRequestException(
-        `Insufficient stock. Available: ${quantityBefore}, Requested: ${quantity}`,
+        `Số lượng tồn kho không đủ. Có sẵn: ${quantityBefore}, Yêu cầu: ${quantity}`,
       );
     }
 
@@ -224,7 +224,7 @@ export class InventoryService {
         }
 
         throw new BadRequestException(
-          `Insufficient stock for product ${productInfo.name}. Available: ${productInfo.quantity || 0}, Requested: ${item.quantity}`,
+          `Số lượng tồn kho không đủ cho sản phẩm ${productInfo.name}. Có sẵn: ${productInfo.quantity || 0}, Yêu cầu: ${item.quantity}`,
         );
       }
 

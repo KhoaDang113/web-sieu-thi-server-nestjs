@@ -41,26 +41,35 @@ export class ShipperService {
 
   async createForUser(userId: string) {
     const session: ClientSession = await this.connection.startSession();
-        
-    try{
-      const shipper = await session.withTransaction(async () => { 
+
+    try {
+      const shipper = await session.withTransaction(async () => {
         const userObjectId = new Types.ObjectId(userId);
 
-        const user = await this.userModel.findById(userObjectId).session(session);
+        const user = await this.userModel
+          .findById(userObjectId)
+          .session(session);
         if (!user) {
           throw new NotFoundException('User not found');
         }
 
-        const existing = await this.shipperModel.findOne({ user_id: userObjectId }).session(session);
+        const existing = await this.shipperModel
+          .findOne({ user_id: userObjectId })
+          .session(session);
         if (existing) {
           throw new BadRequestException('User is already a shipper');
         }
 
-        const [shipperDoc] = await this.shipperModel.create([{
-          user_id: userObjectId,
-          is_online: false,
-          is_deleted: false,
-        }], { session });
+        const [shipperDoc] = await this.shipperModel.create(
+          [
+            {
+              user_id: userObjectId,
+              is_online: false,
+              is_deleted: false,
+            },
+          ],
+          { session },
+        );
 
         user.role = 'shipper';
         await user.save({ session });
@@ -68,11 +77,11 @@ export class ShipperService {
         return shipperDoc;
       });
       return shipper;
-    }catch (e) {
+    } catch (e) {
       console.error(`Create shipper failed: ${e.message}`, e.stack);
       throw e;
-    }finally {
-      session.endSession();
+    } finally {
+      await session.endSession();
     }
   }
 
@@ -93,24 +102,31 @@ export class ShipperService {
   ): Promise<Shipper> {
     const userObjectId = this.ensureObjectId(userId, 'user id');
 
-    const shipperExist = await this.shipperModel.findOne({ user_id: userObjectId });
+    const shipperExist = await this.shipperModel.findOne({
+      user_id: userObjectId,
+    });
     if (!shipperExist) {
       throw new NotFoundException('Shipper not found');
     }
 
-    const orderOfShipper = await this.orderModel.find({ shipper_id: shipperExist._id, status: { $in: ['assigned', 'shipped'] } });
+    const orderOfShipper = await this.orderModel.find({
+      shipper_id: shipperExist._id,
+      status: { $in: ['assigned', 'shipped'] },
+    });
     if (orderOfShipper.length > 0) {
-      throw new BadRequestException('Shipper is already assigned to an order. Cannot change online status');
+      throw new BadRequestException(
+        'Shipper is already assigned to an order. Cannot change online status',
+      );
     }
 
-    const location = setOnlineStatusDto.latitude &&
-      setOnlineStatusDto.longitude
-      ? {
-          latitude: setOnlineStatusDto.latitude,
-          longitude: setOnlineStatusDto.longitude,
-          address: setOnlineStatusDto.address,
-        }
-      : undefined;
+    const location =
+      setOnlineStatusDto.latitude && setOnlineStatusDto.longitude
+        ? {
+            latitude: setOnlineStatusDto.latitude,
+            longitude: setOnlineStatusDto.longitude,
+            address: setOnlineStatusDto.address,
+          }
+        : undefined;
 
     const shipper = await this.shipperModel.findOneAndUpdate(
       { user_id: userObjectId },
@@ -122,8 +138,11 @@ export class ShipperService {
       { upsert: true, new: true },
     );
 
-    if ((await this.redis.get(`shipper:${shipper._id}:current`)) === null) {
-      await this.redis.set(`shipper:${shipper._id}:current`, '0');
+    if (
+      (await this.redis.get(`shipper:${shipper._id as string}:current`)) ===
+      null
+    ) {
+      await this.redis.set(`shipper:${shipper._id as string}:current`, '0');
     }
 
     if (setOnlineStatusDto.is_online) {
@@ -152,10 +171,7 @@ export class ShipperService {
       .populate('user_id', 'name email phone avatar');
   }
 
-  async getShipperOrders(
-    userId: string,
-    status?: string,
-  ): Promise<Order[]> {
+  async getShipperOrders(userId: string, status?: string): Promise<Order[]> {
     const userObjectId = this.ensureObjectId(userId, 'user id');
 
     const shipper = await this.shipperModel.findOne({ user_id: userObjectId });
@@ -163,7 +179,7 @@ export class ShipperService {
       throw new NotFoundException('Shipper not found');
     }
 
-    const filter: any = {
+    const filter: Record<string, any> = {
       shipper_id: shipper._id,
       is_deleted: false,
     };
@@ -171,7 +187,9 @@ export class ShipperService {
     if (status) {
       filter.status = status;
     } else {
-      filter.status = { $in: ['assigned', 'shipped', 'delivered', 'completed'] };
+      filter.status = {
+        $in: ['assigned', 'shipped', 'delivered', 'completed'],
+      };
     }
 
     const orders = await this.orderModel
@@ -208,13 +226,13 @@ export class ShipperService {
     if (!order) {
       throw new NotFoundException('Order not found or not assigned to you');
     }
-    
+
     if (order.status !== 'assigned') {
       throw new BadRequestException(
         `Cannot start delivery for order with status: ${order.status}`,
       );
     }
-    
+
     const previousStatus = order.status;
     order.status = 'shipped';
     order.shipped_at = new Date();
@@ -229,7 +247,7 @@ export class ShipperService {
       throw new NotFoundException('Order not found after starting delivery');
     }
 
-    await this.notificationRealtimeService.notifyOrderStatusUpdatedByShipperToStaff( {
+    this.notificationRealtimeService.notifyOrderStatusUpdatedByShipperToStaff({
       orderId,
       previousStatus,
       newStatus: 'shipped',
@@ -302,8 +320,12 @@ export class ShipperService {
       .populate('address_id')
       .populate('items.product_id', 'name slug image_primary unit_price');
 
-    if ((await this.redis.get(`shipper:${shipper._id}:current`)) !== null || (await this.redis.get(`shipper:${shipper._id}:current`)) !== '0') {
-      await this.redis.decr(`shipper:${shipper._id}:current`);
+    if (
+      (await this.redis.get(`shipper:${shipper._id as string}:current`)) !==
+        null ||
+      (await this.redis.get(`shipper:${shipper._id as string}:current`)) !== '0'
+    ) {
+      await this.redis.decr(`shipper:${shipper._id as string}:current`);
     }
 
     this.assignOrderService.drainQueue();
@@ -313,7 +335,7 @@ export class ShipperService {
     }
 
     // Thông báo cho các staff khác
-    await this.notificationRealtimeService.notifyOrderStatusUpdatedByShipperToStaff({
+    this.notificationRealtimeService.notifyOrderStatusUpdatedByShipperToStaff({
       orderId,
       previousStatus,
       newStatus: 'delivered',

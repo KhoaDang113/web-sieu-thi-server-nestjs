@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateOrderRatingDto } from './dto/create-order-rating.dto';
 import { UpdateOrderRatingDto } from './dto/update-order-rating.dto';
 import { AdminResponseDto } from './dto/admin-response.dto';
@@ -10,33 +16,40 @@ import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
 
 @Injectable()
 export class OrderRatingService {
-
   constructor(
     @InjectModel(OrderRating.name) private orderRatingModel: Model<OrderRating>,
     @InjectModel(Order.name) private orderModel: Model<Order>,
     private cloudinaryService: CloudinaryService,
   ) {}
-  async create(createOrderRatingDto: CreateOrderRatingDto, userId: string, file: Express.Multer.File[]) {
-    if(!userId){
+  async create(
+    createOrderRatingDto: CreateOrderRatingDto,
+    userId: string,
+    file: Express.Multer.File[],
+  ) {
+    if (!userId) {
       throw new UnauthorizedException('User not found');
     }
 
-    const order = await this.orderModel.findOne({ _id: createOrderRatingDto.order_id }).exec();
+    const order = await this.orderModel
+      .findOne({ _id: createOrderRatingDto.order_id })
+      .exec();
     if (!order) {
       throw new NotFoundException('Order not found');
     }
 
-    if(order.user_id.toString() !== userId){
+    if (order.user_id.toString() !== userId) {
       throw new UnauthorizedException('You can only rate your own orders');
     }
 
-    const existOrderRating = await this.orderRatingModel.findOne({ order_id: createOrderRatingDto.order_id }).exec();
+    const existOrderRating = await this.orderRatingModel
+      .findOne({ order_id: createOrderRatingDto.order_id })
+      .exec();
     if (existOrderRating) {
       throw new ConflictException('Order already rated');
     }
 
     let imageUrl = createOrderRatingDto.images;
-    if (file) {
+    if (file && file.length > 0) {
       try {
         imageUrl = await this.cloudinaryService.uploadMultipleImages(
           file,
@@ -61,13 +74,13 @@ export class OrderRatingService {
 
   async findAll(page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-   
+
     const [data, total] = await Promise.all([
       this.orderRatingModel
         .find()
         .populate({
           path: 'order_id',
-          populate: { path: 'address_id' }
+          populate: { path: 'address_id' },
         })
         .populate('user_id')
         .select('-__v')
@@ -75,7 +88,7 @@ export class OrderRatingService {
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.orderRatingModel.countDocuments().exec()
+      this.orderRatingModel.countDocuments().exec(),
     ]);
 
     return {
@@ -83,7 +96,7 @@ export class OrderRatingService {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -92,16 +105,16 @@ export class OrderRatingService {
       throw new NotFoundException('Invalid order rating ID');
     }
 
-
-    const orderRating = await this.orderRatingModel.findById(id)
+    const orderRating = await this.orderRatingModel
+      .findById(id)
       .populate({
         path: 'order_id',
-        populate: { path: 'address_id' }
+        populate: { path: 'address_id' },
       })
       .populate('user_id')
       .select('-__v')
       .exec();
-   
+
     if (!orderRating) {
       throw new NotFoundException('Order rating not found');
     }
@@ -114,10 +127,11 @@ export class OrderRatingService {
       throw new NotFoundException('Invalid order ID');
     }
 
-    const orderRating = await this.orderRatingModel.findOne({ order_id: orderId })
+    const orderRating = await this.orderRatingModel
+      .findOne({ order_id: orderId })
       .populate({
         path: 'order_id',
-        populate: { path: 'address_id' }
+        populate: { path: 'address_id' },
       })
       .populate('user_id')
       .select('-__v')
@@ -134,7 +148,7 @@ export class OrderRatingService {
     id: string,
     updateOrderRatingDto: UpdateOrderRatingDto,
     userId: string,
-    file?: Express.Multer.File[]
+    file?: Express.Multer.File[],
   ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Invalid order rating ID');
@@ -168,11 +182,11 @@ export class OrderRatingService {
           ...updateOrderRatingDto,
           ...(imageUrl && { images: imageUrl }),
         },
-        { new: true }
+        { new: true },
       )
       .populate({
         path: 'order_id',
-        populate: { path: 'address_id' }
+        populate: { path: 'address_id' },
       })
       .populate('user_id')
       .select('-__v')
@@ -196,13 +210,13 @@ export class OrderRatingService {
         id,
         {
           addmin_respone: adminResponseDto.admin_response,
-          addmin_respone_time: new Date()
+          addmin_respone_time: new Date(),
         },
-        { new: true }
+        { new: true },
       )
       .populate({
         path: 'order_id',
-        populate: { path: 'address_id' }
+        populate: { path: 'address_id' },
       })
       .populate('user_id')
       .select('-__v')

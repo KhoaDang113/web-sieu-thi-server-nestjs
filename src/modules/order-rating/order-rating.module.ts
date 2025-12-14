@@ -6,10 +6,13 @@ import { OrderRating, OrderRatingSchema } from './schema/order-rating.schema';
 import { Order, OrderSchema } from '../order/schema/order.schema';
 import { CloudinaryModule } from 'src/shared/cloudinary/cloudinary.module';
 @Module({
-  imports: [MongooseModule.forFeature([
-    { name: OrderRating.name, schema: OrderRatingSchema },
-    { name: Order.name, schema: OrderSchema },
-  ]), CloudinaryModule],
+  imports: [
+    MongooseModule.forFeature([
+      { name: OrderRating.name, schema: OrderRatingSchema },
+      { name: Order.name, schema: OrderSchema },
+    ]),
+    CloudinaryModule,
+  ],
   controllers: [OrderRatingController],
   providers: [OrderRatingService],
   exports: [OrderRatingService],

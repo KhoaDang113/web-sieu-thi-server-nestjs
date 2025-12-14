@@ -1,22 +1,22 @@
-import { Injectable } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
-import { Order, OrderDocument } from "../schema/order.schema";
-import { Product, ProductDocument } from "../../catalog/schema/product.schema";
-import { User, UserDocument } from "../../users/schemas/user.schema";
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Order, OrderDocument } from '../schema/order.schema';
+import { Product, ProductDocument } from '../../catalog/schema/product.schema';
+import { User, UserDocument } from '../../users/schemas/user.schema';
 
 @Injectable()
 export class StatsService {
-    constructor(
-        @InjectModel(Order.name)
-        private readonly orderModel: Model<OrderDocument>,
-        @InjectModel(Product.name)
-        private readonly productModel: Model<ProductDocument>,
-        @InjectModel(User.name)
-        private readonly userModel: Model<UserDocument>,
-    ) {}
+  constructor(
+    @InjectModel(Order.name)
+    private readonly orderModel: Model<OrderDocument>,
+    @InjectModel(Product.name)
+    private readonly productModel: Model<ProductDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
+  ) {}
 
-    // Dashboard statistics for admin
+  // Dashboard statistics for admin
   async getDashboardStats(): Promise<{
     totalUsers: number;
     totalProducts: number;
@@ -24,7 +24,12 @@ export class StatsService {
     monthlyRevenue: number;
     weeklyRevenue: Array<{ date: string; revenue: number; orders: number }>;
     topProducts: Array<{ productId: string; name: string; quantity: number }>;
-    lowStockProducts: Array<{ id: string; name: string; quantity: number; unit: string }>;
+    lowStockProducts: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      unit: string;
+    }>;
     recentOrders: Array<{
       id: string;
       customer: string;
@@ -35,22 +40,18 @@ export class StatsService {
   }> {
     const now = new Date();
 
-
     // Start of today
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
 
-
     // Start of month
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
 
     // 7 days ago
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
     sevenDaysAgo.setHours(0, 0, 0, 0);
-    console.log("123");
-    
+    console.log('123');
 
     // Run all queries in parallel
     const [
@@ -66,10 +67,8 @@ export class StatsService {
       // 1. Total users (excluding admin)
       this.userModel.countDocuments({ role: { $ne: 'admin' } }),
 
-
       // 2. Total active products
       this.productModel.countDocuments({ is_deleted: false, is_active: true }),
-
 
       // 3. Today's delivered orders count
       this.orderModel.countDocuments({
@@ -77,7 +76,6 @@ export class StatsService {
         delivered_at: { $gte: startOfToday },
         is_deleted: false,
       }),
-
 
       // 4. Monthly revenue (sum of delivered orders this month)
       this.orderModel.aggregate([
@@ -95,7 +93,6 @@ export class StatsService {
           },
         },
       ]),
-
 
       // 5. Weekly revenue (last 7 days)
       this.orderModel.aggregate([
@@ -117,7 +114,6 @@ export class StatsService {
         },
         { $sort: { _id: 1 } },
       ]),
-
 
       // 6. Top 5 best-selling products
       this.orderModel.aggregate([
@@ -154,7 +150,6 @@ export class StatsService {
         },
       ]),
 
-
       // 7. Low stock products (quantity <= 10)
       this.productModel
         .find({
@@ -165,7 +160,6 @@ export class StatsService {
         .select('name quantity unit')
         .limit(10)
         .lean(),
-
 
       // 8. 5 most recent orders
       this.orderModel
@@ -178,17 +172,20 @@ export class StatsService {
     ]);
 
     // Format weekly revenue with all 7 days
-    const weeklyRevenue: Array<{ date: string; revenue: number; orders: number }> = [];
+    const weeklyRevenue: Array<{
+      date: string;
+      revenue: number;
+      orders: number;
+    }> = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(sevenDaysAgo);
       date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
 
-
       const found = weeklyRevenueResult.find(
-        (r: { _id: string; revenue: number; orders: number }) => r._id === dateStr,
+        (r: { _id: string; revenue: number; orders: number }) =>
+          r._id === dateStr,
       );
-
 
       weeklyRevenue.push({
         date: dateStr,
@@ -196,7 +193,6 @@ export class StatsService {
         orders: found ? found.orders : 0,
       });
     }
-
 
     // Format recent orders
     const recentOrders = recentOrdersResult.map((order: any) => ({
@@ -207,7 +203,6 @@ export class StatsService {
       createdAt: order.created_at,
     }));
 
-
     // Format low stock products
     const formattedLowStock = lowStockProducts.map((p: any) => ({
       id: p._id.toString(),
@@ -216,14 +211,12 @@ export class StatsService {
       unit: p.unit || 'cái',
     }));
 
-
     // Format top products
     const topProducts = topProductsResult.map((p: any) => ({
       productId: p.productId.toString(),
       name: p.name,
       quantity: p.quantity,
     }));
-
 
     return {
       totalUsers,
@@ -236,5 +229,4 @@ export class StatsService {
       recentOrders,
     };
   }
-
 }
