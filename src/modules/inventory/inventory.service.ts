@@ -10,6 +10,7 @@ import {
   InventoryTransaction,
   InventoryTransactionDocument,
 } from './schema/inventory-transaction.schema';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 @Injectable()
 export class InventoryService {
@@ -18,6 +19,7 @@ export class InventoryService {
     private productModel: Model<ProductDocument>,
     @InjectModel(InventoryTransaction.name)
     private inventoryTransactionModel: Model<InventoryTransactionDocument>,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
   private ensureObjectId(id: string, label = 'id'): Types.ObjectId {
@@ -91,7 +93,17 @@ export class InventoryService {
       note,
     });
 
-    return await transaction.save();
+    const result = await transaction.save();
+
+    // Emit realtime update
+    this.realtimeGateway.emitToAllAdmins('inventory:updated', {
+      productId: productId,
+      action: 'import',
+      quantity: quantity,
+      remaining: quantityAfter,
+    });
+
+    return result;
   }
 
   async exportInventory(
@@ -139,7 +151,17 @@ export class InventoryService {
       note,
     });
 
-    return await transaction.save();
+    const result = await transaction.save();
+
+    // Emit realtime update
+    this.realtimeGateway.emitToAllAdmins('inventory:updated', {
+      productId: productId,
+      action: 'export',
+      quantity: quantity,
+      remaining: quantityAfter,
+    });
+
+    return result;
   }
 
   async adjustInventory(
@@ -183,7 +205,17 @@ export class InventoryService {
       note,
     });
 
-    return await transaction.save();
+    const result = await transaction.save();
+
+    // Emit realtime update
+    this.realtimeGateway.emitToAllAdmins('inventory:updated', {
+      productId: productId,
+      action: 'adjustment',
+      quantity: Math.abs(quantityChange),
+      remaining: quantityAfter,
+    });
+
+    return result;
   }
 
   async exportInventoryForOrder(
@@ -249,6 +281,14 @@ export class InventoryService {
 
       const savedTransaction = await transaction.save();
       transactions.push(savedTransaction);
+
+      // Emit realtime update
+      this.realtimeGateway.emitToAllAdmins('inventory:updated', {
+        productId: item.product_id,
+        action: 'order_export',
+        quantity: item.quantity,
+        remaining: quantityAfter,
+      });
     }
 
     return transactions;
@@ -335,6 +375,14 @@ export class InventoryService {
 
       const savedTransaction = await transaction.save();
       transactions.push(savedTransaction);
+
+      // Emit realtime update
+      this.realtimeGateway.emitToAllAdmins('inventory:updated', {
+        productId: item.product_id,
+        action: 'order_return',
+        quantity: item.quantity,
+        remaining: quantityAfter,
+      });
     }
 
     return transactions;

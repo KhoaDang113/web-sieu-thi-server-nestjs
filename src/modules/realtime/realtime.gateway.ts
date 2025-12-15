@@ -90,6 +90,13 @@ export class RealtimeGateway
           `Socket ${client.id} also joined shipper:${userId} and all-shippers room`,
         );
       }
+      if (payload.role === 'admin' || payload.type === 'admin') {
+        await client.join(`admin:${userId}`);
+        await client.join('all-admins'); // Join vào room chung cho tất cả admin
+        this.logger.log(
+          `Socket ${client.id} also joined admin:${userId} and all-admins room`,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Socket ${client.id} authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -111,6 +118,13 @@ export class RealtimeGateway
           `Socket ${client.id} disconnected from all staff rooms`,
         );
       }
+      if (role === 'admin') {
+        await client.leave(`admin:${userId}`);
+        await client.leave('all-admins');
+        this.logger.log(
+          `Socket ${client.id} disconnected from all admin rooms`,
+        );
+      }
     }
   }
 
@@ -122,6 +136,12 @@ export class RealtimeGateway
   emitToRoom(roomId: string, event: string, payload: any) {
     this.io.to(roomId).emit(event, payload);
     this.logger.debug(`Emitted '${event}' to room:${roomId}`);
+  }
+
+  // Emit to all admins
+  emitToAllAdmins(event: string, payload: any) {
+    this.io.to('all-admins').emit(event, payload);
+    this.logger.debug(`Emitted '${event}' to all-admins`);
   }
 
   // Emit to all staff members

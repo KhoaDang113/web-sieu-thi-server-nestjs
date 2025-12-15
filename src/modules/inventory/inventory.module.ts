@@ -1,4 +1,5 @@
 import { MongooseModule } from '@nestjs/mongoose';
+import { RealtimeModule } from '../realtime/realtime.module';
 import { Product, ProductSchema } from '../catalog/schema/product.schema';
 import {
   InventoryTransaction,
@@ -14,6 +15,7 @@ import { Module } from '@nestjs/common';
       { name: Product.name, schema: ProductSchema },
       { name: InventoryTransaction.name, schema: InventoryTransactionSchema },
     ]),
+    RealtimeModule,
   ],
   controllers: [InventoryController],
   providers: [InventoryService],
