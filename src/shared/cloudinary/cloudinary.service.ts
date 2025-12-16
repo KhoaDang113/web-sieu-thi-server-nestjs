@@ -17,6 +17,13 @@ export class CloudinaryService {
       'image/png',
       'image/jpg',
       'image/webp',
+      'image/gif',
+      'image/svg+xml',
+      'image/bmp',
+      'image/heic',
+      'image/heif',
+      'image/avif',
+      'image/tiff',
     ];
     if (!allowedFormats.includes(file.mimetype)) {
       throw new BadRequestException(
