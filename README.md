@@ -17,48 +17,23 @@
 
 Dự án được xây dựng dựa trên kiến trúc **Module của NestJS**, áp dụng Dependency Injection để tách biệt Controller và Service, giúp code dễ dàng mở rộng và bảo trì. Các tác vụ nặng được đẩy vào Background Job Queue thông qua BullMQ.
 
-```mermaid
-graph TD
-    subgraph Clients ["Đối tượng sử dụng"]
-        C1["Khách hàng (Web)"]
-        C2["Quản trị viên (Dashboard)"]
-        C3["Người giao hàng (Shipper App)"]
-    end
+## 🏗️ Cấu trúc dự án
 
-    subgraph Backend ["Hệ thống Backend (NestJS)"]
-        API["API Gateway / Controllers"]
-        BL["Business Logic (Services)"]
-        MQ["BullMQ (Background Jobs)"]
-        WS["Socket.io (Real-time)"]
-    end
+Dưới đây là sơ đồ tổ chức thư mục mã nguồn chính (`src/`) của dự án:
 
-    subgraph Storage ["Lưu trữ & Tìm kiếm"]
-        MDB[("MongoDB (Dữ liệu chính)")]
-        RDS[("Redis (Cache & Queue)")]
-        ES[("Elasticsearch (Search Engine)")]
-    end
-
-    subgraph ThirdParty ["Dịch vụ tích hợp"]
-        PAY["VNPay (Thanh toán)"]
-        AI["Google GenAI (Trí tuệ nhân tạo)"]
-        IMG["Cloudinary (Hình ảnh)"]
-        NOTI["SMS/Email (Twilio/Nodemailer)"]
-    end
-
-    %% Luồng tương tác
-    Clients --> API
-    Clients <--> WS
-    API --> BL
-    BL --> MDB
-    BL --> RDS
-    BL --> ES
-    BL --> MQ
-    MQ --> BL
-
-    BL --> PAY
-    BL --> AI
-    BL --> IMG
-    BL --> NOTI
+```text
+src/
+├── common/             # Decorators, Guards, Interceptors dùng chung
+├── config/             # Cấu hình hệ thống (Database, Redis, v.v.)
+├── modules/            # Các module nghiệp vụ chính (Auth, Catalog, Order, v.v.)
+│   ├── auth/           # Xác thực & Phân quyền
+│   ├── catalog/        # Danh mục & Sản phẩm
+│   ├── order/          # Quản lý Đặt hàng
+│   ├── shipper/        # Nghiệp vụ Giao hàng
+│   └── ...             # Các module khác
+├── shared/             # Các dịch vụ dùng chung (Cloudinary, Mailer, v.v.)
+├── types/              # Định nghĩa các Interface và Type
+└── main.ts             # Điểm khởi đầu của ứng dụng
 ```
 
 ## 🌟 Các tính năng chính (chèn ảnh)
@@ -83,16 +58,30 @@ graph TD
 
 - Quản lý vòng đời đơn hàng: Chờ xác nhận -> Đang xử lý -> Đang giao dịch -> Đã giao.
 - Phân bổ đơn hàng cho Shipper, tính toán thời gian, quãng đường và chi phí giao hàng.
-  ![Giao diện quản lý đơn hàng của nhân viên](./assets/image-4.png)
-  ![Giao diện quản lý đơn của shipper](./assets/image-1.png)
-  ![Giao diện nhận đơn của shipper](./assets/image-2.png)
+
+<div align="center">
+  <img src="./assets/image-4.png" alt="Quản lý đơn hàng nhân viên" width="700">
+  <p><i>Giao diện quản lý đơn hàng của nhân viên</i></p>
+  <br/>
+  <img src="./assets/image-1.png" alt="Quản lý đơn shipper" width="700">
+  <p><i>Giao diện quản lý đơn của shipper</i></p>
+  <br/>
+  <img src="./assets/image-2.png" alt="Nhận đơn shipper" width="700">
+  <p><i>Giao diện nhận đơn của shipper</i></p>
+</div>
 
 ### 💬 Tương tác theo thời gian thực (Real-time)
 
 - Chat trực tuyến giữa khách hàng và nhân viên hỗ trợ thông qua **Socket.io**.
 - Thông báo đẩy (push notifications) khi trạng thái đơn hàng thay đổi.
-  ![Giao diện chat trực tuyến](./assets/image.png)
-  ![Giao diện hội thoại với khách hàng của staff](./assets/image-3.png)
+
+<div align="center">
+  <img src="./assets/image.png" alt="Chat trực tuyến" width="700">
+  <p><i>Giao diện chat trực tuyến</i></p>
+  <br/>
+  <img src="./assets/image-3.png" alt="Hội thoại khách hàng" width="600">
+  <p><i>Giao diện hội thoại với khách hàng của staff</i></p>
+</div>
 
 ### ⭐ Đánh giá & Bình luận
 
